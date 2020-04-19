@@ -16,8 +16,8 @@ option(STATIC_ANALYSIS
   "Enable static analysis tools"
   OFF)
 
-list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake)
-find_package(fmt REQUIRED)
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
 
 file(GLOB_RECURSE SRCS
   LIST_DIRECTORIES false
@@ -60,9 +60,9 @@ set(BUILD_OPTS
   -funswitch-loops
   -Ofast)
 
+target_link_libraries(mandelbrot PRIVATE ${CONAN_LIBS})
 target_compile_options(mandelbrot PRIVATE ${BUILD_OPTS})
 target_compile_features(mandelbrot PRIVATE cxx_std_20)
-target_link_libraries(mandelbrot PRIVATE fmt::fmt)
 
 if(${FORCE_COLORED_OUTPUT} OR ${CMAKE_GENERATOR} EQUAL "Ninja")
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
