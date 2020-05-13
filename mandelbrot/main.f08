@@ -21,11 +21,12 @@ module mandelbrot
 
   type, public :: Image
     private
-    integer      :: i, imax
-    type(Coord)  :: res, current
-    type(Frame)  :: frame
-    type(Bounds) :: scaling
-    complex      :: c, z
+    type(Coord)                              :: res, current
+    type(Frame)                              :: frame
+    type(Bounds)                             :: scaling
+    complex                                  :: c = 0, z = 0
+    integer(kind=int32)                      :: i = 0, imax
+    integer(kind=int32), allocatable, public :: img(:, :)
   contains
     procedure             :: clean    => image_clean
     procedure             :: calc     => image_calc
@@ -46,14 +47,18 @@ contains
     r = this%upper%x - this%lower%x
   end function
 
-  type(Image) elemental function make_image(res, frame_in, imax) result(img)
+  type(Image) function make_image(res, frame_in, imax) result(img)
     type(Coord),         intent(in) :: res
     type(Frame),         intent(in) :: frame_in
     integer(kind=int32), intent(in) :: imax
 
-    img%imax  = imax
-    img%res   = res
-    img%frame = frame_in
+    img%imax      = imax
+    img%res       = res
+    img%frame     = frame_in
+    img%scaling%x = img%frame%width() / img%res%x
+    img%scaling%y = img%frame%height() / img%res%y
+
+    allocate(img%img(res%x, res%y))
   end function
 
   elemental subroutine image_clean(this)
@@ -75,5 +80,11 @@ program main
   use iso_fortran_env
   use mandelbrot
   implicit none
+
+  type(Image) :: img
+
+  img = make_image(Coord(x=1024, y=768), &
+                   Frame(Bounds(-2.0, -1.2), Bounds(1.0, 1.2)), &
+                   4096)
 
 end program
