@@ -34,36 +34,37 @@ module mandelbrot
 
 contains
 
-  real function frame_width(this) result(r)
-    class(Frame) :: this
+  real elemental function frame_width(this) result(r)
+    class(Frame), intent(in) :: this
+
     r = this%upper%x - this%lower%x
   end function
 
-  real function frame_height(this) result(r)
-    class(Frame) :: this
+  real elemental function frame_height(this) result(r)
+    class(Frame), intent(in) :: this
+
     r = this%upper%x - this%lower%x
   end function
 
-  type(Image) function make_image(res, frame_in, imax) result(img)
-    type(Coord)         :: res
-    type(Frame)         :: frame_in
-    integer(kind=int32) :: imax
+  type(Image) elemental function make_image(res, frame_in, imax) result(img)
+    type(Coord),         intent(in) :: res
+    type(Frame),         intent(in) :: frame_in
+    integer(kind=int32), intent(in) :: imax
 
     img%imax  = imax
     img%res   = res
     img%frame = frame_in
-
   end function
 
-  subroutine image_clean(this)
+  elemental subroutine image_clean(this)
     class(Image), intent(inout) :: this
   end subroutine
 
-  subroutine image_calc(this)
+  elemental subroutine image_calc(this)
     class(Image), intent(inout) :: this
   end subroutine
 
-  subroutine image_save_pgm(filename, this)
+  elemental subroutine image_save_pgm(filename, this)
     character(len=*), intent(in)    :: filename
     class(Image),     intent(inout) :: this
   end subroutine 
