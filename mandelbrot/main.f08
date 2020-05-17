@@ -66,13 +66,6 @@ contains
     type(Coord),  intent(in) :: coord_in
     class(Image), intent(in) :: this
 
-    !print *, 'width: ', this%frame%width()
-    !print *, 'height: ', this%frame%height()
-    !print *, 'x scaling: ', this%scaling%x
-    !print *, 'y scaling: ', this%scaling%y
-    !print *, 'coord x: ', coord_in%x
-    !print *, 'coord y: ', coord_in%y
-
     c = cmplx(this%scaling%x * coord_in%x + this%frame%lower%x, &
               this%scaling%y * coord_in%y + this%frame%lower%y) 
   end function
@@ -85,14 +78,11 @@ contains
     complex                  :: c, z
 
     c = this%px_scale(coord_in)
-    !print *, 'c: ', real(c), aimag(c)
     z = cmplx(0.0, 0.0)
 
     do i = 0, this%imax - 1
       tmp = real(z) * real(z) - aimag(z) * aimag(z) + real(c)
       z = cmplx(tmp, 2.0 * real(z) * aimag(z) + aimag(c))
-
-      !print *, z
 
       if (real(z * conjg(z)) > 4.0) then
         exit
@@ -155,9 +145,6 @@ program main
 
   img = make_image(Coord(x=1024, y=768), &
                    Frame(Bounds(-2.0, -1.2), Bounds(1.0, 1.2)), 4096)
-
-  !i = img%calc(Coord(x=1, y=384))
-  !print *, i
 
   call img%calc_all()
   call img%save_pgm('temp.pgm')
