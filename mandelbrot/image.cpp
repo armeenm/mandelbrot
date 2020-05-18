@@ -19,32 +19,34 @@ auto Image::clean() noexcept -> bool {
 
   auto constexpr fset_4 = FloatSet{4.0F};
   auto const over_4 = l2sqnorm > fset_4;
-  auto const reached_iter_limit = iter_ >= uset_maxiter_;
+  auto const reached_iter_limit = iter_ > uset_maxiter_;
   auto const empty = reached_iter_limit | over_4;
 
-  /* If nothing is empty/finished, move on */
+  // If nothing is empty/finished, move on //
   if (!_mm256_movemask_epi8(empty.vec))
     return false;
 
-  /* Calculate pixel index */
+  // Calculate pixel index //
   auto const px_idx = current_.y * uset_res_x_ + current_.x;
 
-  /* Update picture */
+  // Update picture //
   for (std::size_t i = 0; i < iter_.lanes.size(); ++i)
     if (empty.lanes[i])
       data_[px_idx.lanes[i]] = iter_.lanes[i];
 
-  /* Check lane completion status */
-  auto const finished = empty & (px_idx >= uset_px_idx_max_);
+  // Check lane completion status //
+  auto const over_max = px_idx > uset_px_idx_max_;
+  auto const finished = empty & over_max;
 
   [[unlikely]] if (_mm256_movemask_epi8(finished.vec) == -1) return true;
 
+  // Update current pixel indices //
+
+  auto const only_empty = empty & ~over_max;
   auto const x_max_reached = current_.x > uset_x_max_;
 
-  /* Update current pixel indices */
-  auto const only_empty = empty & (px_idx <= uset_px_idx_max_);
-
-  current_.x = (~empty & current_.x) | (only_empty & ~x_max_reached & (current_.x + uset_lanes_)) |
+  current_.x = (~empty & current_.x) |
+               (only_empty & ~x_max_reached & (current_.x + uset_lanes_incr_)) |
                (only_empty & x_max_reached & pixel_offset_x_);
 
   auto constexpr uset_1 = IntSet{1U};
