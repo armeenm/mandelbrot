@@ -32,24 +32,24 @@ public:
     std::uint32_t maxiter = 4096;
   };
 
-  [[nodiscard]] explicit Image(Args const&) noexcept;
+  explicit Image(Args const&) noexcept;
 
   Image(Image const&) = delete;
-  [[nodiscard]] Image(Image&&) noexcept = default;
+  Image(Image&&) noexcept = default;
 
   auto operator=(Image const&) -> Image& = delete;
   auto operator=(Image&&) noexcept -> Image& = default;
 
   ~Image() = default;
 
-  [[nodiscard]] auto frame() const noexcept { return frame_; }
-  [[nodiscard]] auto resolution() const noexcept { return resolution_; }
-  [[nodiscard]] auto maxiter() const noexcept { return maxiter_; }
-  [[nodiscard]] auto scaling() const noexcept { return scaling_; }
-  [[nodiscard]] auto pixel_count() const noexcept { return pixel_count_; }
-  [[nodiscard]] auto data() const noexcept { return data_.get(); }
-  [[nodiscard]] auto current() const noexcept { return current_; }
-  [[nodiscard]] auto iter() const noexcept { return iter_; }
+  [[nodiscard]] [[gnu::cold]] auto frame() const noexcept { return frame_; }
+  [[nodiscard]] [[gnu::cold]] auto resolution() const noexcept { return resolution_; }
+  [[nodiscard]] [[gnu::cold]] auto maxiter() const noexcept { return maxiter_; }
+  [[nodiscard]] [[gnu::cold]] auto scaling() const noexcept { return scaling_; }
+  [[nodiscard]] [[gnu::cold]] auto pixel_count() const noexcept { return pixel_count_; }
+  [[nodiscard]] [[gnu::cold]] auto data() const noexcept { return data_.get(); }
+  [[nodiscard]] [[gnu::cold]] auto current() const noexcept { return current_; }
+  [[nodiscard]] [[gnu::cold]] auto iter() const noexcept { return iter_; }
 
   auto clean() noexcept -> bool;
   auto calc() noexcept -> void;

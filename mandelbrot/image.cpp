@@ -8,7 +8,6 @@
 
 Image::Image(Args const& args) noexcept
     : resolution_(args.resolution), frame_(args.frame), maxiter_(args.maxiter) {
-  update_c();
 
   std::iota(pixel_offset_x_.lanes.begin(), pixel_offset_x_.lanes.end(), 0);
 }
@@ -20,8 +19,8 @@ auto Image::clean() noexcept -> bool {
   auto const static fset_4 = FloatSet{4.0F};
   auto const over_4 = l2sqnorm > fset_4;
 
-  auto const static iset_iter_max = IntSet{maxiter_ - 1};
-  auto const reached_iter_limit = iter_ > iset_iter_max;
+  auto const static iset_iter_max = IntSet{maxiter_};
+  auto const reached_iter_limit = iter_ >= iset_iter_max;
 
   auto const empty = reached_iter_limit | over_4;
 
@@ -48,13 +47,13 @@ auto Image::clean() noexcept -> bool {
   auto const x_max_reached = current_.x > iset_x_max;
 
   /* Update current pixel indices */
-  auto const static uset_lanes = IntSet{static_cast<std::uint32_t>(iter_.lanes.size())};
+  auto const static uset_lanes = IntSet{std::uint32_t(iter_.lanes.size())};
   auto const only_empty = empty & (px_idx <= iset_px_idx_max);
 
   current_.x = (~empty & current_.x) | (only_empty & ~x_max_reached & (current_.x + uset_lanes)) |
                (only_empty & x_max_reached & pixel_offset_x_);
 
-  auto const static uset_1 = IntSet<std::uint32_t>{1};
+  auto const static uset_1 = IntSet{1U};
   current_.y += uset_1 & empty & x_max_reached;
 
   iter_ &= ~empty;
@@ -67,19 +66,14 @@ auto Image::clean() noexcept -> bool {
 }
 
 auto Image::calc() noexcept -> void {
-  auto constexpr ITERS = 1U;
-  auto constexpr INCR = 1U;
+  auto const temp = z_.real * z_.real - z_.imag * z_.imag + c_.real;
 
-  for (auto i = 0U; i < ITERS; ++i) {
-    auto const temp = z_.real * z_.real - z_.imag * z_.imag + c_.real;
+  auto const static fset_2 = FloatSet{2.0F};
+  z_.imag = fset_2 * z_.real * z_.imag + c_.imag;
+  z_.real = temp;
 
-    auto const static fset_2 = FloatSet{2.0F};
-    z_.imag = fset_2 * z_.real * z_.imag + c_.imag;
-    z_.real = temp;
-
-    auto const static uset_iter_incr = IntSet{INCR};
-    iter_ += uset_iter_incr;
-  }
+  auto const static iter_incr = IntSet{1U};
+  iter_ += iter_incr;
 }
 
 auto Image::save_pgm(std::string_view filename) const noexcept -> bool {

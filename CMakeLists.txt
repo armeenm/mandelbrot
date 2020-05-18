@@ -62,7 +62,7 @@ set(BUILD_OPTS
 
 target_link_libraries(mandelbrot PRIVATE ${CONAN_LIBS})
 target_compile_options(mandelbrot PRIVATE ${BUILD_OPTS})
-target_compile_features(mandelbrot PRIVATE cxx_std_20)
+target_compile_features(mandelbrot PRIVATE cxx_std_17)
 
 if(${FORCE_COLORED_OUTPUT} OR ${CMAKE_GENERATOR} EQUAL "Ninja")
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
