@@ -4,6 +4,7 @@
 #include <concepts>
 #include <fmt/ostream.h>
 #include <immintrin.h>
+#include <type_traits>
 
 #include "util.h"
 
@@ -16,10 +17,22 @@ union FloatSet {
   __m256 vec;
   std::array<float, sizeof(vec) / sizeof(float)> lanes;
 
-  [[nodiscard]] FloatSet() noexcept : vec(_mm256_setzero_ps()) {}
-  [[nodiscard]] FloatSet(__m256 const& in) noexcept : vec(in) {}
-  [[nodiscard]] FloatSet(decltype(lanes) const& in) noexcept : lanes(in) {}
-  [[nodiscard]] FloatSet(float fill) noexcept : vec(_mm256_set1_ps(fill)) {}
+  [[nodiscard]] constexpr FloatSet() noexcept {
+    if (std::is_constant_evaluated())
+      lanes = {};
+    else
+      vec = _mm256_setzero_ps();
+  }
+
+  [[nodiscard]] constexpr FloatSet(__m256 const& in) noexcept : vec{in} {}
+  [[nodiscard]] constexpr FloatSet(decltype(lanes) const& in) noexcept : lanes{in} {}
+  [[nodiscard]] constexpr FloatSet(float fill) noexcept {
+    if (std::is_constant_evaluated())
+      for (auto&& lane : lanes)
+        lane = fill;
+    else
+      vec = _mm256_set1_ps(fill);
+  }
 
   [[nodiscard]] auto operator+(FloatSet const& other) const noexcept -> FloatSet {
     return _mm256_add_ps(vec, other.vec);
@@ -107,21 +120,32 @@ public:
   __m256i vec;
   std::array<T, sizeof(vec) / sizeof(T)> lanes;
 
-  [[nodiscard]] IntSet() noexcept : vec(_mm256_setzero_si256()) {}
-  [[nodiscard]] IntSet(__m256i const& in) noexcept : vec(in) {}
-  [[nodiscard]] IntSet(decltype(lanes) const& in) noexcept : lanes(in) {}
-
-  [[nodiscard]] IntSet(T fill) noexcept {
-    if constexpr (sizeof(T) == 8)
-      vec = _mm256_set1_epi64x(fill);
-    else if constexpr (sizeof(T) == 4)
-      vec = _mm256_set1_epi32(fill);
-    else if constexpr (sizeof(T) == 2)
-      vec = _mm256_set1_epi16(fill);
-    else if constexpr (sizeof(T) == 1)
-      vec = _mm256_set1(epi8(fill));
+  [[nodiscard]] constexpr IntSet() noexcept {
+    if (std::is_constant_evaluated())
+      lanes = {};
     else
-      static_assert(always_false<T>, "Invalid size");
+      vec = _mm256_setzero_si256();
+  }
+
+  [[nodiscard]] constexpr IntSet(__m256i const& in) noexcept : vec(in) {}
+  [[nodiscard]] constexpr IntSet(decltype(lanes) const& in) noexcept : lanes(in) {}
+
+  [[nodiscard]] constexpr IntSet(T fill) noexcept {
+    if (std::is_constant_evaluated()) {
+      for (auto&& lane : lanes)
+        lane = fill;
+    } else {
+      if constexpr (sizeof(T) == 8)
+        vec = _mm256_set1_epi64x(fill);
+      else if constexpr (sizeof(T) == 4)
+        vec = _mm256_set1_epi32(fill);
+      else if constexpr (sizeof(T) == 2)
+        vec = _mm256_set1_epi16(fill);
+      else if constexpr (sizeof(T) == 1)
+        vec = _mm256_set1(epi8(fill));
+      else
+        static_assert(always_false<T>, "Invalid size");
+    }
   }
 
   [[nodiscard]] auto operator+(IntSet const& other) const noexcept -> IntSet {

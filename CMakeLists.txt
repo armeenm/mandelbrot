@@ -16,6 +16,7 @@ option(STATIC_ANALYSIS
   "Enable static analysis tools"
   OFF)
 
+set(CONAN_SYSTEM_INCLUDES ON)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
@@ -58,11 +59,18 @@ set(BUILD_OPTS
   -frounding-math
   -fsplit-loops
   -funswitch-loops
+  -fpeel-loops
+  -fno-signed-zeros
+  -fno-trapping-math
   -Ofast)
 
-target_link_libraries(mandelbrot PRIVATE ${CONAN_LIBS})
+target_link_libraries(mandelbrot PRIVATE gcov ${CONAN_LIBS})
 target_compile_options(mandelbrot PRIVATE ${BUILD_OPTS})
-target_compile_features(mandelbrot PRIVATE cxx_std_17)
+target_compile_features(mandelbrot PRIVATE cxx_std_20)
+
+#target_compile_options(mandelbrot PRIVATE
+#  -fprofile-dir=${CMAKE_CURRENT_SOURCE_DIR}/profile
+#  -fprofile-use)
 
 if(${FORCE_COLORED_OUTPUT} OR ${CMAKE_GENERATOR} EQUAL "Ninja")
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
