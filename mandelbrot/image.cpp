@@ -1,7 +1,9 @@
 #include "image.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cstdio>
+#include <cstring>
 #include <fmt/core.h>
 #include <immintrin.h>
 #include <numeric>
@@ -15,54 +17,44 @@ Image::Image(Args const& args) noexcept
 }
 
 auto Image::clean() noexcept -> bool {
-  /* Check lane empty status */
+  // Check lane empty status //
   auto const l2sqnorm = z_.l2sqnorm();
 
   auto constexpr fset_4 = FloatSet{4.0F};
   auto const over_4 = l2sqnorm > fset_4;
   auto const reached_iter_limit = iter_ > uset_maxiter_;
-  auto const empty = reached_iter_limit | over_4;
 
-  // If nothing is empty/finished, move on //
-  if (!_mm256_movemask_epi8(empty.vec))
+  empty_ |= reached_iter_limit | over_4;
+
+  if (_mm256_movemask_epi8(empty_.vec) != -1)
     return false;
 
-  // Calculate pixel index //
-  auto const px_idx = current_.y * uset_res_x_ + current_.x;
-
   // Update picture //
-  for (std::size_t i = 0; i < iter_.lanes.size(); ++i)
-    if (empty.lanes[i])
-      data_[px_idx.lanes[i]] = iter_.lanes[i];
 
-  // Check lane completion status //
-  auto const over_max = px_idx > uset_px_idx_max_;
-  auto const finished = empty & over_max;
-
-  [[unlikely]] if (_mm256_movemask_epi8(finished.vec) == -1) return true;
+  std::memcpy(pos_, iter_.lanes.cbegin(), sizeof(iter_.lanes));
+  pos_ += iter_.lanes.size();
 
   // Update current pixel indices //
 
-  auto const only_empty = empty & ~over_max;
   auto const x_max_reached = current_.x > uset_x_max_;
 
-  current_.x = (~empty & current_.x) |
-               (only_empty & ~x_max_reached & (current_.x + uset_lanes_incr_)) |
-               (only_empty & x_max_reached & pixel_offset_x_);
+  current_.x =
+      (~x_max_reached & (current_.x + uset_lanes_incr_)) | (x_max_reached & pixel_offset_x_);
 
-  current_.y += uset_1 & empty & x_max_reached;
+  current_.y += uset_1 & x_max_reached;
 
-  iter_ &= ~empty;
-  z_.real &= ~empty;
-  z_.imag &= ~empty;
-
-  std::copy(current_.x.lanes.begin(), current_.x.lanes.end(), fset_px_.lanes.begin());
-  std::copy(current_.y.lanes.begin(), current_.y.lanes.end(), fset_py_.lanes.begin());
+  std::copy(current_.x.lanes.cbegin(), current_.x.lanes.cend(), fset_px_.lanes.begin());
 
   c_.real = fset_px_ * fset_scaling_.real + fset_frame_lower_.x;
-  c_.imag = fset_py_ * fset_scaling_.imag + fset_frame_lower_.y;
+  c_.imag =
+      FloatSet{static_cast<float>(current_.y.lanes[7])} * fset_scaling_.imag + fset_frame_lower_.y;
 
-  return false;
+  iter_ ^= iter_;
+  empty_ ^= empty_;
+  z_.real ^= z_.real;
+  z_.imag ^= z_.imag;
+
+  return pos_ == data_.get() + pixel_count_;
 }
 
 auto Image::calc() noexcept -> void {
@@ -73,7 +65,7 @@ auto Image::calc() noexcept -> void {
     z_.imag = fset_2 * z_.real * z_.imag + c_.imag;
     z_.real = temp;
 
-    iter_ += uset_1;
+    iter_ += uset_1 & ~empty_;
   }
 }
 

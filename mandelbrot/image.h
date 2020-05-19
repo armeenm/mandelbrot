@@ -67,22 +67,23 @@ private:
 
   std::uint32_t pixel_count_ = resolution_.x * resolution_.y;
 
-  std::unique_ptr<std::uint32_t[]> data_ =
-      std::make_unique<std::uint32_t[]>(resolution_.x * resolution_.y);
+  std::unique_ptr<std::uint32_t[]> data_ = std::make_unique<std::uint32_t[]>(pixel_count_);
+  std::uint32_t* pos_ = data_.get();
 
   PixelSet current_ = {.x = pixel_offset_x_, .y = 0U};
 
   IntSet<std::uint32_t> iter_;
+  IntSet<std::uint32_t> empty_ = IntSet{0U};
   Complex<FloatSet> z_;
 
-  FloatSet fset_px_, fset_py_;
+  FloatSet fset_px_;
 
-  IntSet<std::uint32_t> uset_maxiter_ = IntSet{maxiter_ - 1};
-  IntSet<std::uint32_t> uset_res_x_ = IntSet{resolution_.x};
-  IntSet<std::uint32_t> uset_px_idx_max_ = IntSet{pixel_count_ - 9};
   IntSet<std::uint32_t> uset_x_max_ = IntSet{resolution_.x - 9};
+  IntSet<std::uint32_t> uset_maxiter_ = IntSet{maxiter_ - 1};
   IntSet<std::uint32_t> uset_lanes_incr_ = IntSet{std::uint32_t(iter_.lanes.size())};
+
   GenCoord<FloatSet> fset_frame_lower_ = {frame_.lower.x, frame_.lower.y};
-  Complex<FloatSet> fset_scaling_ = {FloatSet{scaling_.real}, FloatSet{scaling_.imag}};
+
   Complex<FloatSet> c_ = {fset_frame_lower_.x, fset_frame_lower_.y};
+  Complex<FloatSet> fset_scaling_ = {FloatSet{scaling_.real}, FloatSet{scaling_.imag}};
 };
