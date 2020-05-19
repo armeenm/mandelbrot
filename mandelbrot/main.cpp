@@ -23,8 +23,7 @@ auto main(int const argc, char const* const* const argv) -> int {
 
   auto const start_comp = std::chrono::high_resolution_clock::now();
 
-  while (!img.clean())
-    img.calc();
+  img.calc();
 
   auto const end_comp = std::chrono::high_resolution_clock::now();
 

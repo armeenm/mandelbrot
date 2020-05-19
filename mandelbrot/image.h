@@ -73,15 +73,16 @@ private:
   PixelSet current_ = {.x = pixel_offset_x_, .y = 0U};
 
   IntSet<std::uint32_t> iter_;
-  Complex<FloatSet> c_, z_;
+  Complex<FloatSet> z_;
+
+  FloatSet fset_px_, fset_py_;
 
   IntSet<std::uint32_t> uset_maxiter_ = IntSet{maxiter_ - 1};
   IntSet<std::uint32_t> uset_res_x_ = IntSet{resolution_.x};
   IntSet<std::uint32_t> uset_px_idx_max_ = IntSet{pixel_count_ - 9};
   IntSet<std::uint32_t> uset_x_max_ = IntSet{resolution_.x - 9};
   IntSet<std::uint32_t> uset_lanes_incr_ = IntSet{std::uint32_t(iter_.lanes.size())};
-  Complex<FloatSet> fset_scaling_ = {FloatSet{scaling_.real}, FloatSet{scaling_.imag}};
   GenCoord<FloatSet> fset_frame_lower_ = {frame_.lower.x, frame_.lower.y};
-
-  auto update_c() noexcept -> void;
+  Complex<FloatSet> fset_scaling_ = {FloatSet{scaling_.real}, FloatSet{scaling_.imag}};
+  Complex<FloatSet> c_ = {fset_frame_lower_.x, fset_frame_lower_.y};
 };

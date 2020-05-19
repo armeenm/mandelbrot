@@ -6,9 +6,10 @@
 #include <immintrin.h>
 #include <numeric>
 
+auto constexpr inline uset_1 = IntSet{1U};
+
 Image::Image(Args const& args) noexcept
     : resolution_{args.resolution}, frame_{args.frame}, maxiter_{args.maxiter} {
-  update_c();
 
   std::iota(pixel_offset_x_.lanes.begin(), pixel_offset_x_.lanes.end(), 0);
 }
@@ -49,27 +50,31 @@ auto Image::clean() noexcept -> bool {
                (only_empty & ~x_max_reached & (current_.x + uset_lanes_incr_)) |
                (only_empty & x_max_reached & pixel_offset_x_);
 
-  auto constexpr uset_1 = IntSet{1U};
   current_.y += uset_1 & empty & x_max_reached;
 
   iter_ &= ~empty;
   z_.real &= ~empty;
   z_.imag &= ~empty;
 
-  update_c();
+  std::copy(current_.x.lanes.begin(), current_.x.lanes.end(), fset_px_.lanes.begin());
+  std::copy(current_.y.lanes.begin(), current_.y.lanes.end(), fset_py_.lanes.begin());
+
+  c_.real = fset_px_ * fset_scaling_.real + fset_frame_lower_.x;
+  c_.imag = fset_py_ * fset_scaling_.imag + fset_frame_lower_.y;
 
   return false;
 }
 
 auto Image::calc() noexcept -> void {
-  auto const temp = z_.real * z_.real - z_.imag * z_.imag + c_.real;
+  while (!clean()) {
+    auto const temp = z_.real * z_.real - z_.imag * z_.imag + c_.real;
 
-  auto constexpr fset_2 = FloatSet{2.0F};
-  z_.imag = fset_2 * z_.real * z_.imag + c_.imag;
-  z_.real = temp;
+    auto constexpr fset_2 = FloatSet{2.0F};
+    z_.imag = fset_2 * z_.real * z_.imag + c_.imag;
+    z_.real = temp;
 
-  auto constexpr iter_incr = IntSet{1U};
-  iter_ += iter_incr;
+    iter_ += uset_1;
+  }
 }
 
 auto Image::save_pgm(std::string_view filename) const noexcept -> bool {
@@ -91,15 +96,4 @@ auto Image::save_pgm(std::string_view filename) const noexcept -> bool {
 
   std::fclose(fp);
   return true;
-}
-
-auto Image::update_c() noexcept -> void {
-  auto fset_px = FloatSet{};
-  auto fset_py = FloatSet{};
-
-  std::copy(current_.x.lanes.begin(), current_.x.lanes.end(), fset_px.lanes.begin());
-  std::copy(current_.y.lanes.begin(), current_.y.lanes.end(), fset_py.lanes.begin());
-
-  c_.real = fset_px * fset_scaling_.real + fset_frame_lower_.x;
-  c_.imag = fset_py * fset_scaling_.imag + fset_frame_lower_.y;
 }
