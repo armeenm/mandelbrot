@@ -9,22 +9,25 @@
 #include <memory>
 #include <string_view>
 
-template <typename T> struct GenCoord { T x, y; };
+template <typename T> struct GenCoord {
+  T x, y;
+
+  [[nodiscard]] GenCoord(T x_in, T y_in) noexcept : x{x_in}, y{y_in} {}
+  [[nodiscard]] GenCoord() noexcept {}
+};
 
 class Image {
 public:
-  template <typename T> struct GenFrame;
-
-  using Coord = GenCoord<std::uint32_t>;
-  using PixelSet = GenCoord<IntSet<std::uint32_t>>;
-  using Frame = GenFrame<float>;
-
   template <typename T> struct GenFrame {
     GenCoord<T> lower, upper;
 
     [[nodiscard]] auto width() const noexcept -> T { return upper.x - lower.x; }
     [[nodiscard]] auto height() const noexcept -> T { return upper.y - lower.y; }
   };
+
+  using Coord = GenCoord<std::uint32_t>;
+  using PixelSet = GenCoord<IntSet<std::uint32_t>>;
+  using Frame = GenFrame<float>;
 
   struct Args {
     Coord resolution = {.x = 1024, .y = 768};

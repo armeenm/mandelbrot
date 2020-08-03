@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstring>
+#include <fmt/compile.h>
 #include <fmt/core.h>
 #include <immintrin.h>
 #include <numeric>
@@ -20,7 +21,7 @@ auto Image::calc() noexcept -> void {
   std::iota(pixel_x_offset.lanes.begin(), pixel_x_offset.lanes.end(), 0);
 
   auto fset_px = FloatSet{};
-  auto fset_frame_lower = GenCoord<FloatSet>{frame_.lower.x, frame_.lower.y};
+  auto fset_frame_lower = GenCoord{frame_.lower.x, frame_.lower.y};
   auto fset_scaling = Complex<FloatSet>{{frame_.width() / float(resolution_.x)},
                                         {frame_.height() / float(resolution_.y)}};
 
@@ -95,9 +96,10 @@ auto Image::save_pgm(std::string_view filename) const noexcept -> bool {
   /* Data */
   for (auto i = 0U; i < pixel_count_; ++i) {
     if (i % resolution_.x == 0)
-      fmt::print(fp, "\n");
+      std::putc('\n', fp);
 
-    fmt::print(fp, "{} ", data_[i]);
+    auto const s = fmt::format(FMT_COMPILE("{} "), data_[i]);
+    std::fwrite(s.c_str(), sizeof(char), s.size(), fp);
   }
 
   std::fclose(fp);
