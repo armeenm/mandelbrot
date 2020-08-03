@@ -1,13 +1,11 @@
 #include <chrono>
 #include <fmt/core.h>
 #include <string>
+#include <string_view>
 
 #include "image.h"
 
 auto constexpr inline filename_def = "mandelbrot.pgm";
-auto constexpr inline x_res_def = std::uint32_t{1024};
-auto constexpr inline y_res_def = std::uint32_t{768};
-auto constexpr inline maxiter = std::uint32_t{4096};
 
 auto main(int const argc, char const* const* const argv) -> int {
   if (argc == 3 || argc > 4) {
@@ -16,10 +14,19 @@ auto main(int const argc, char const* const* const argv) -> int {
   }
 
   auto const filename = (argc > 1) ? argv[1] : filename_def;
-  auto const x_res = (argc > 2) ? static_cast<std::uint32_t>(std::stoul(argv[2])) : x_res_def;
-  auto const y_res = (argc > 2) ? static_cast<std::uint32_t>(std::stoul(argv[3])) : y_res_def;
 
-  auto img = Image{{.resolution = Image::Coord{x_res, y_res}, .maxiter = maxiter}};
+  auto constexpr stoi = [](std::string_view str) {
+    return static_cast<std::uint32_t>(std::stoul(str.data()));
+  };
+
+  auto const args = [=] {
+    if (argc > 2)
+      return Image::Args{.resolution = Image::Coord{.x = stoi(argv[2]), .y = stoi(argv[3])}};
+    else
+      return Image::Args{};
+  }();
+
+  auto img = Image{args};
 
   auto const start_comp = std::chrono::high_resolution_clock::now();
 
