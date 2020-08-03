@@ -4,10 +4,10 @@
 
 #include "image.h"
 
-auto constexpr inline FILENAME = "mandelbrot.pgm";
-auto constexpr inline X_RES = std::uint32_t{1024};
-auto constexpr inline Y_RES = std::uint32_t{768};
-auto constexpr inline MAXITER = std::uint32_t{4096};
+auto constexpr inline filename_def = "mandelbrot.pgm";
+auto constexpr inline x_res_def = std::uint32_t{1024};
+auto constexpr inline y_res_def = std::uint32_t{768};
+auto constexpr inline maxiter = std::uint32_t{4096};
 
 auto main(int const argc, char const* const* const argv) -> int {
   if (argc == 3 || argc > 4) {
@@ -15,11 +15,11 @@ auto main(int const argc, char const* const* const argv) -> int {
     return -1;
   }
 
-  auto const filename = (argc > 1) ? argv[1] : FILENAME;
-  auto const x_res = (argc > 2) ? static_cast<std::uint32_t>(std::stoul(argv[2])) : X_RES;
-  auto const y_res = (argc > 2) ? static_cast<std::uint32_t>(std::stoul(argv[3])) : Y_RES;
+  auto const filename = (argc > 1) ? argv[1] : filename_def;
+  auto const x_res = (argc > 2) ? static_cast<std::uint32_t>(std::stoul(argv[2])) : x_res_def;
+  auto const y_res = (argc > 2) ? static_cast<std::uint32_t>(std::stoul(argv[3])) : y_res_def;
 
-  auto img = Image{{.resolution = Image::Coord{x_res, y_res}, .maxiter = MAXITER}};
+  auto img = Image{{.resolution = Image::Coord{x_res, y_res}, .maxiter = maxiter}};
 
   auto const start_comp = std::chrono::high_resolution_clock::now();
 
