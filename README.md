@@ -4,12 +4,12 @@ C++20, fmtlib
 # Building
 
 ```
-conan install --build fmt -if builds/Release .
-cmake -H. -Bbuilds/Release
-cmake --build builds/Release
+conan install --build fmt -if build .
+cmake -S. -Bbuild
+cmake --build build
 ```
 
-Binary will be produced at `builds/Release/bin/mandelbrot`.
+Binary will be produced at `build/bin/mandelbrot`.
 
 # Usage
 
