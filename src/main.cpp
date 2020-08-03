@@ -29,13 +29,13 @@ auto main(int const argc, char const* const* const argv) -> int {
 
   img.save_pgm(filename);
 
-  // auto const end_save = std::chrono::high_resolution_clock::now();
+  auto const end_save = std::chrono::high_resolution_clock::now();
 
   auto constexpr to_ms = [](auto const& start, auto const& end) {
     return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
   };
 
-  // fmt::print("Total time: {}ms\n", to_ms(start_comp, end_save));
+  fmt::print("Total time: {}ms\n", to_ms(start_comp, end_save));
   fmt::print("  Computation time: {}ms\n", to_ms(start_comp, end_comp));
-  // fmt::print("  Saving time: {}ms\n", to_ms(end_comp, end_save));
+  fmt::print("  Saving time: {}ms\n", to_ms(end_comp, end_save));
 }

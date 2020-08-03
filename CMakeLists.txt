@@ -23,11 +23,11 @@ conan_basic_setup()
 file(GLOB_RECURSE SRCS
   LIST_DIRECTORIES false
   CONFIGURE_DEPENDS
-  "mandelbrot/*.cpp")
+  "src/*.cpp")
 
 add_executable(mandelbrot ${SRCS})
 
-target_include_directories(mandelbrot PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(mandelbrot PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 set(BUILD_OPTS
   -march=native
