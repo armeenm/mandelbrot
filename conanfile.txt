@@ -1,5 +1,0 @@
-[requires]
-fmt/7.0.2
-
-[generators]
-cmake

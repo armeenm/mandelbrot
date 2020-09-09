@@ -4,7 +4,7 @@ include(cmake/BuildType.cmake)
 include(cmake/ExportCompileCommands.cmake)
 
 project(mandelbrot
-  VERSION 0.0.1
+  VERSION 1.0.0
   DESCRIPTION "Mandelbrot gen"
   LANGUAGES CXX)
 
@@ -16,14 +16,12 @@ option(STATIC_ANALYSIS
   "Enable static analysis tools"
   OFF)
 
-set(CONAN_SYSTEM_INCLUDES ON)
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
-
 file(GLOB_RECURSE SRCS
   LIST_DIRECTORIES false
   CONFIGURE_DEPENDS
   "src/*.cpp")
+
+find_package(fmt REQUIRED CONFIG)
 
 add_executable(mandelbrot ${SRCS})
 
@@ -64,13 +62,9 @@ set(BUILD_OPTS
   -fno-trapping-math
   -Ofast)
 
-target_link_libraries(mandelbrot PRIVATE gcov ${CONAN_LIBS})
+target_link_libraries(mandelbrot PRIVATE fmt::fmt)
 target_compile_options(mandelbrot PRIVATE ${BUILD_OPTS})
 target_compile_features(mandelbrot PRIVATE cxx_std_20)
-
-#target_compile_options(mandelbrot PRIVATE
-#  -fprofile-dir=${CMAKE_CURRENT_SOURCE_DIR}/profile
-#  -fprofile-use)
 
 if(FORCE_COLORED_OUTPUT OR CMAKE_GENERATOR MATCHES "^Ninja")
   add_compile_options(
