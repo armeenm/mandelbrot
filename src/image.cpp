@@ -53,7 +53,7 @@ auto Image::calc() noexcept -> void {
     period += uset_1 & ~empty;
 
     // Check lane empty status //
-    auto constexpr uset_maxperiod = IntSet{20U};
+    auto constexpr uset_maxperiod = IntSet{150U};
     auto constexpr fset_4 = FloatSet{4.0F};
     auto const over_4 = (zsq.real + zsq.imag) > fset_4;
     auto const reached_iter_limit = iter > uset_maxiter;
