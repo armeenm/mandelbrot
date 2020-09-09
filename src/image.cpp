@@ -21,9 +21,11 @@ auto Image::calc() noexcept -> void {
 
   auto z = Complex<FloatSet>{};
   auto zsq = Complex<FloatSet>{};
+  auto zold = Complex<FloatSet>{};
   auto px = FloatSet{};
   auto iter = IntSet{0U};
   auto empty = IntSet{0U};
+  auto period = IntSet{0U};
   auto data_pos = data_.get();
 
   auto const x_max = IntSet{resolution_.x - 9};
@@ -48,13 +50,21 @@ auto Image::calc() noexcept -> void {
     zsq.imag = z.imag * z.imag;
 
     iter += uset_1 & ~empty;
+    period += uset_1 & ~empty;
 
     // Check lane empty status //
+    auto constexpr uset_maxperiod = IntSet{20U};
     auto constexpr fset_4 = FloatSet{4.0F};
     auto const over_4 = (zsq.real + zsq.imag) > fset_4;
     auto const reached_iter_limit = iter > uset_maxiter;
+    auto const reached_period_limit = period > uset_maxperiod;
+    auto const repeat = FloatSet{(z.real == zold.real) & (z.imag == zold.imag)};
 
-    empty |= reached_iter_limit | over_4;
+    empty |= reached_iter_limit | over_4 | repeat;
+    iter = (iter & ~repeat) | (uset_maxiter & repeat);
+    period &= ~reached_period_limit;
+    zold.real = (zold.real & ~reached_period_limit) | (z.real & reached_period_limit);
+    zold.imag = (zold.imag & ~reached_period_limit) | (z.imag & reached_period_limit);
 
     // Check if all current pixels are empty //
     if (_mm256_movemask_epi8(empty.vec) == -1) {
