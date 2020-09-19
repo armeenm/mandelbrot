@@ -16,8 +16,7 @@ auto Image::calc() noexcept -> void {
   // Setup //
   auto constexpr uset_1 = IntSet{1U};
 
-  auto const frame_lower = GenCoord{frame_.lower.x, frame_.lower.y};
-  auto c = Complex<FloatSet>{frame_lower.x, frame_lower.y};
+  auto c = Complex<FloatSet>{frame_lower_.x, frame_lower_.y};
 
   auto z = Complex<FloatSet>{};
   auto zsq = Complex<FloatSet>{};
@@ -28,19 +27,7 @@ auto Image::calc() noexcept -> void {
   auto period = IntSet{0U};
   auto data_pos = data_.get();
 
-  auto const x_max = IntSet{resolution_.x - 9};
-  auto const scaling = Complex<FloatSet>{{frame_.width() / static_cast<float>(resolution_.x)},
-                                         {frame_.height() / static_cast<float>(resolution_.y)}};
-  auto const lanes_incr = IntSet{static_cast<std::uint32_t>(iter.lanes.size())};
-  auto const uset_maxiter = IntSet{maxiter_ - 1};
-
-  auto const px_x_offset = []() {
-    auto ret = IntSet{0U};
-    std::iota(ret.lanes.begin(), ret.lanes.end(), 0);
-    return ret;
-  }();
-
-  auto current = PixelSet{.x = px_x_offset, .y = 0U};
+  auto current = PixelSet{.x = px_x_offset_, .y = 0U};
 
   // Loop //
   do {
@@ -56,12 +43,12 @@ auto Image::calc() noexcept -> void {
     auto constexpr uset_maxperiod = IntSet{150U};
     auto constexpr fset_4 = FloatSet{4.0F};
     auto const over_4 = (zsq.real + zsq.imag) > fset_4;
-    auto const reached_iter_limit = iter > uset_maxiter;
+    auto const reached_iter_limit = iter > uset_maxiter_;
     auto const reached_period_limit = period > uset_maxperiod;
     auto const repeat = FloatSet{(z.real == zold.real) & (z.imag == zold.imag)};
 
     empty |= reached_iter_limit | over_4 | repeat;
-    iter = (iter & ~repeat) | (uset_maxiter & repeat);
+    iter = (iter & ~repeat) | (uset_maxiter_ & repeat);
     period &= ~reached_period_limit;
     zold.real = (zold.real & ~reached_period_limit) | (z.real & reached_period_limit);
     zold.imag = (zold.imag & ~reached_period_limit) | (z.imag & reached_period_limit);
@@ -73,16 +60,16 @@ auto Image::calc() noexcept -> void {
       data_pos += iter.lanes.size();
 
       // Update current pixel indices //
-      auto const x_max_reached = current.x > x_max;
+      auto const x_max__reached = current.x > x_max_;
 
-      current.x = (~x_max_reached & (current.x + lanes_incr)) | (x_max_reached & px_x_offset);
-      current.y += uset_1 & x_max_reached;
+      current.x = (~x_max__reached & (current.x + lanes_incr_)) | (x_max__reached & px_x_offset_);
+      current.y += uset_1 & x_max__reached;
 
       // Conver uint32's to floats and copy to px vector //
       std::copy(current.x.lanes.cbegin(), current.x.lanes.cend(), px.lanes.begin());
 
-      c.real = px * scaling.real + frame_lower.x;
-      c.imag = FloatSet{static_cast<float>(current.y.lanes[7])} * scaling.imag + frame_lower.y;
+      c.real = px * scaling_.real + frame_lower_.x;
+      c.imag = FloatSet{static_cast<float>(current.y.lanes[7])} * scaling_.imag + frame_lower_.y;
 
       // Clear out //
       iter ^= iter;
