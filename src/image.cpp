@@ -16,11 +16,12 @@ Image::Image(Args const& args) noexcept
 
   auto threads = std::vector<std::jthread>{};
 
-  calc_(0U, resolution_.y);
+  // TODO: Make this stuff more robust
 
-  //  for (auto i = 0U; i < std::jthread::hardware_concurrency; ++i) {
-  //    threads.emplace_back(calc_(0U, resolution_.y));
-  //  }
+  auto const div = resolution_.y / std::jthread::hardware_concurrency();
+  for (auto i = 0U; i < std::jthread::hardware_concurrency(); ++i) {
+    threads.emplace_back(&Image::calc_, this, i * div, (i + 1) * div);
+  }
 }
 
 auto Image::calc_(std::uint32_t const y_begin, std::uint32_t const y_end) noexcept -> void {
@@ -41,7 +42,8 @@ auto Image::calc_(std::uint32_t const y_begin, std::uint32_t const y_end) noexce
                                          {frame_.height() / static_cast<float>(resolution_.y)}};
   auto const uset_iter_limit = IntSet{maxiter_ - 1};
 
-  auto c = Complex<FloatSet>{frame_.lower.x, frame_.lower.y};
+  auto c = Complex<FloatSet>{frame_.lower.x,
+                             FloatSet{static_cast<float>(y_begin)} * scaling.imag + frame_.lower.y};
   auto z = Complex<FloatSet>{};
   auto zsq = Complex<FloatSet>{};
   auto zold = Complex<FloatSet>{};
@@ -50,7 +52,7 @@ auto Image::calc_(std::uint32_t const y_begin, std::uint32_t const y_end) noexce
   auto iter = IntSet{0U};
   auto empty = IntSet{0U};
   auto period = IntSet{0U};
-  auto data_pos = data_.get();
+  auto data_pos = data_.get() + resolution_.x * y_begin;
 
   auto current_x = px_x_offset;
   auto current_y = y_begin;

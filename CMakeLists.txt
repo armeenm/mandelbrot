@@ -21,6 +21,9 @@ file(GLOB_RECURSE SRCS
   CONFIGURE_DEPENDS
   "src/*.cpp")
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+
+find_package(Threads REQUIRED)
 find_package(fmt REQUIRED CONFIG)
 
 add_executable(mandelbrot ${SRCS})
@@ -62,7 +65,7 @@ set(BUILD_OPTS
   -fno-trapping-math
   -Ofast)
 
-target_link_libraries(mandelbrot PRIVATE fmt::fmt)
+target_link_libraries(mandelbrot PRIVATE fmt::fmt Threads::Threads)
 target_compile_options(mandelbrot PRIVATE ${BUILD_OPTS})
 target_compile_features(mandelbrot PRIVATE cxx_std_20)
 
