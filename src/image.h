@@ -10,7 +10,6 @@
 #include <memory>
 #include <numeric>
 #include <string_view>
-#include <thread>
 
 template <typename T> struct GenCoord {
   T x, y;
@@ -49,37 +48,18 @@ public:
 
   ~Image() = default;
 
-  [[nodiscard]] [[gnu::cold]] auto frame() const noexcept { return frame_; }
-  [[nodiscard]] [[gnu::cold]] auto resolution() const noexcept { return resolution_; }
-  [[nodiscard]] [[gnu::cold]] auto maxiter() const noexcept { return maxiter_; }
-  [[nodiscard]] [[gnu::cold]] auto data() const noexcept { return data_.get(); }
+  [[nodiscard, gnu::cold]] auto frame() const noexcept { return frame_; }
+  [[nodiscard, gnu::cold]] auto resolution() const noexcept { return resolution_; }
+  [[nodiscard, gnu::cold]] auto maxiter() const noexcept { return maxiter_; }
+  [[nodiscard, gnu::cold]] auto data() const noexcept { return data_.get(); }
 
-  auto calc() noexcept -> void;
   auto save_pgm(std::string_view filename) const noexcept -> bool;
 
 private:
-  IntSet<std::uint32_t> px_x_offset_ = []() {
-    auto ret = IntSet{0U};
-    std::iota(ret.lanes.begin(), ret.lanes.end(), 0);
-    return ret;
-  }();
-
-  IntSet<std::uint32_t> pixel_offset_x_;
   Coord resolution_;
   Frame frame_;
-
-  IntSet<std::uint32_t> x_max_ = {resolution_.x - 9};
-  IntSet<std::uint32_t> lanes_incr_ = {static_cast<std::uint32_t>(x_max_.lanes.size())};
-
-  GenCoord<float> frame_lower_ = {frame_.lower.x, frame_.lower.y};
-  Complex<FloatSet> scaling_ = {{frame_.width() / static_cast<float>(resolution_.x)},
-                                {frame_.height() / static_cast<float>(resolution_.y)}};
-
   std::uint32_t maxiter_;
-  IntSet<std::uint32_t> uset_maxiter_ = {maxiter_ - 1};
 
   std::uint32_t pixel_count_ = resolution_.x * resolution_.y;
-
   std::unique_ptr<std::uint32_t[]> data_ = std::make_unique<std::uint32_t[]>(pixel_count_);
-  std::vector<std::jthread> pool_;
 };

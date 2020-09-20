@@ -8,20 +8,35 @@
 #include <fmt/core.h>
 #include <immintrin.h>
 #include <numeric>
+#include <thread>
+#include <vector>
 
 Image::Image(Args const& args) noexcept
-    : resolution_{args.resolution}, frame_{args.frame}, maxiter_{args.maxiter} {}
+    : resolution_{args.resolution}, frame_{args.frame}, maxiter_{args.maxiter} {
 
-auto Image::calc() noexcept -> void {
-  // Setup //
+  auto threads = std::vector<std::jthread>{};
+
+  IntSet<std::uint32_t> px_x_offset_ = []() {
+    auto ret = IntSet{0U};
+    std::iota(ret.lanes.begin(), ret.lanes.end(), 0);
+    return ret;
+  }();
+
   auto constexpr uset_1 = IntSet{1U};
   auto constexpr fset_4 = FloatSet{4.0F};
   auto constexpr uset_maxperiod = IntSet{150U};
 
-  auto c = Complex<FloatSet>{frame_lower_.x, frame_lower_.y};
+  auto const x_max = IntSet{resolution_.x - 9U};
+  auto const scaling_ = Complex<FloatSet>{{frame_.width() / static_cast<float>(resolution_.x)},
+                                          {frame_.height() / static_cast<float>(resolution_.y)}};
+  auto const uset_simd_width = IntSet{static_cast<std::uint32_t>(uset_1.lanes.size())};
+  auto const uset_iter_limit = IntSet{maxiter_ - 1};
+
+  auto c = Complex<FloatSet>{frame_.lower.x, frame_.lower.y};
   auto z = Complex<FloatSet>{};
   auto zsq = Complex<FloatSet>{};
   auto zold = Complex<FloatSet>{};
+
   auto px = FloatSet{};
   auto iter = IntSet{0U};
   auto empty = IntSet{0U};
@@ -42,12 +57,12 @@ auto Image::calc() noexcept -> void {
 
     // Check lane empty status //
     auto const over_4 = (zsq.real + zsq.imag) > fset_4;
-    auto const reached_iter_limit = iter > uset_maxiter_;
+    auto const reached_iter_limit = iter > uset_iter_limit;
     auto const reached_period_limit = period > uset_maxperiod;
     auto const repeat = FloatSet{(z.real == zold.real) & (z.imag == zold.imag)};
 
     empty |= reached_iter_limit | over_4 | repeat;
-    iter = (iter & ~repeat) | (uset_maxiter_ & repeat);
+    iter = (iter & ~repeat) | (uset_iter_limit & repeat);
     period &= ~reached_period_limit;
     zold.real = (zold.real & ~reached_period_limit) | (z.real & reached_period_limit);
     zold.imag = (zold.imag & ~reached_period_limit) | (z.imag & reached_period_limit);
@@ -59,16 +74,16 @@ auto Image::calc() noexcept -> void {
       data_pos += iter.lanes.size();
 
       // Update current pixel indices //
-      auto const x_max__reached = current.x > x_max_;
+      auto const x_max_reached = current.x > x_max;
 
-      current.x = (~x_max__reached & (current.x + lanes_incr_)) | (x_max__reached & px_x_offset_);
-      current.y += uset_1 & x_max__reached;
+      current.x = (~x_max_reached & (current.x + uset_simd_width)) | (x_max_reached & px_x_offset_);
+      current.y += uset_1 & x_max_reached;
 
       // Conver uint32's to floats and copy to px vector //
       std::copy(current.x.lanes.cbegin(), current.x.lanes.cend(), px.lanes.begin());
 
-      c.real = px * scaling_.real + frame_lower_.x;
-      c.imag = FloatSet{static_cast<float>(current.y.lanes[7])} * scaling_.imag + frame_lower_.y;
+      c.real = px * scaling_.real + frame_.lower.x;
+      c.imag = FloatSet{static_cast<float>(current.y.lanes[0])} * scaling_.imag + frame_.lower.y;
 
       // Clear out //
       iter ^= iter;

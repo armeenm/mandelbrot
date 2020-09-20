@@ -26,11 +26,9 @@ auto main(int const argc, char const* const* const argv) -> int {
       return Image::Args{};
   }();
 
-  auto img = Image{args};
-
   auto const start_comp = std::chrono::high_resolution_clock::now();
 
-  img.calc();
+  auto img = Image{args};
 
   auto const end_comp = std::chrono::high_resolution_clock::now();
 
