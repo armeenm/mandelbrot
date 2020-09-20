@@ -10,6 +10,7 @@
 #include <memory>
 #include <numeric>
 #include <string_view>
+#include <thread>
 
 template <typename T> struct GenCoord {
   T x, y;
@@ -35,7 +36,7 @@ public:
     Coord resolution = {.x = 1024U, .y = 768U};
     Frame frame = {.lower = {-2.0F, -1.2F}, .upper = {1.0F, 1.2F}};
     std::uint32_t maxiter = 4096U;
-    std::uint32_t threads = 12U;
+    std::uint32_t threads = std::jthread::hardware_concurrency();
   };
 
   explicit Image(Args const&) noexcept;
@@ -61,6 +62,7 @@ private:
   Coord resolution_;
   Frame frame_;
   std::uint32_t maxiter_;
+  std::uint32_t threads_;
 
   std::uint32_t pixel_count_ = resolution_.x * resolution_.y;
   std::unique_ptr<std::uint32_t[]> data_ = std::make_unique<std::uint32_t[]>(pixel_count_);

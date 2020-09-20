@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include "image.h"
+#include "util.h"
 
 auto constexpr inline filename_def = "mandelbrot.pgm";
 
@@ -35,10 +36,6 @@ auto main(int const argc, char const* const* const argv) -> int {
   img.save_pgm(filename);
 
   auto const end_save = std::chrono::high_resolution_clock::now();
-
-  auto constexpr to_ms = [](auto const& start, auto const& end) {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-  };
 
   fmt::print("Total time: {}ms\n", to_ms(start_comp, end_save));
   fmt::print("  Computation time: {}ms\n", to_ms(start_comp, end_comp));

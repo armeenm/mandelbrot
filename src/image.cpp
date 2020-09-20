@@ -1,7 +1,9 @@
 #include "image.h"
+#include "util.h"
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <fmt/compile.h>
@@ -12,20 +14,18 @@
 #include <vector>
 
 Image::Image(Args const& args) noexcept
-    : resolution_{args.resolution}, frame_{args.frame}, maxiter_{args.maxiter} {
-
+    : resolution_{args.resolution}, frame_{args.frame}, maxiter_{args.maxiter}, threads_{
+                                                                                    args.threads} {
   auto threads = std::vector<std::jthread>{};
 
   // TODO: Make this stuff more robust
-
-  auto const div = resolution_.y / std::jthread::hardware_concurrency();
-  for (auto i = 0U; i < std::jthread::hardware_concurrency(); ++i) {
+  auto const div = resolution_.y / threads_;
+  for (auto i = 0U; i < threads_; ++i)
     threads.emplace_back(&Image::calc_, this, i * div, (i + 1) * div);
-  }
 }
 
 auto Image::calc_(std::uint32_t const y_begin, std::uint32_t const y_end) noexcept -> void {
-  fmt::print("Calc @@ {}-{}\n", y_begin, y_end);
+  auto const start = std::chrono::high_resolution_clock::now();
 
   auto constexpr uset_1 = IntSet{1U};
   auto constexpr fset_4 = FloatSet{4.0F};
@@ -107,6 +107,9 @@ auto Image::calc_(std::uint32_t const y_begin, std::uint32_t const y_end) noexce
     }
 
   } while (__builtin_expect(current_y != y_end, 1));
+
+  auto const end = std::chrono::high_resolution_clock::now();
+  fmt::print("calc_({}, {}): {}ms\n", y_begin, y_end, to_ms(start, end));
 }
 
 auto Image::save_pgm(std::string_view const filename) const noexcept -> bool {
