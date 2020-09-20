@@ -56,6 +56,8 @@ public:
   auto save_pgm(std::string_view filename) const noexcept -> bool;
 
 private:
+  auto calc_(std::uint32_t y_begin, std::uint32_t y_end) noexcept -> void;
+
   Coord resolution_;
   Frame frame_;
   std::uint32_t maxiter_;

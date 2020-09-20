@@ -16,20 +16,29 @@ Image::Image(Args const& args) noexcept
 
   auto threads = std::vector<std::jthread>{};
 
-  IntSet<std::uint32_t> px_x_offset_ = []() {
+  calc_(0U, resolution_.y);
+
+  //  for (auto i = 0U; i < std::jthread::hardware_concurrency; ++i) {
+  //    threads.emplace_back(calc_(0U, resolution_.y));
+  //  }
+}
+
+auto Image::calc_(std::uint32_t const y_begin, std::uint32_t const y_end) noexcept -> void {
+  fmt::print("Calc @@ {}-{}\n", y_begin, y_end);
+
+  auto constexpr uset_1 = IntSet{1U};
+  auto constexpr fset_4 = FloatSet{4.0F};
+  auto constexpr uset_maxperiod = IntSet{150U};
+  auto constexpr uset_simd_width = IntSet{static_cast<std::uint32_t>(uset_1.lanes.size())};
+  auto constexpr px_x_offset = []() {
     auto ret = IntSet{0U};
     std::iota(ret.lanes.begin(), ret.lanes.end(), 0);
     return ret;
   }();
 
-  auto constexpr uset_1 = IntSet{1U};
-  auto constexpr fset_4 = FloatSet{4.0F};
-  auto constexpr uset_maxperiod = IntSet{150U};
-
   auto const x_max = IntSet{resolution_.x - 9U};
-  auto const scaling_ = Complex<FloatSet>{{frame_.width() / static_cast<float>(resolution_.x)},
-                                          {frame_.height() / static_cast<float>(resolution_.y)}};
-  auto const uset_simd_width = IntSet{static_cast<std::uint32_t>(uset_1.lanes.size())};
+  auto const scaling = Complex<FloatSet>{{frame_.width() / static_cast<float>(resolution_.x)},
+                                         {frame_.height() / static_cast<float>(resolution_.y)}};
   auto const uset_iter_limit = IntSet{maxiter_ - 1};
 
   auto c = Complex<FloatSet>{frame_.lower.x, frame_.lower.y};
@@ -43,7 +52,8 @@ Image::Image(Args const& args) noexcept
   auto period = IntSet{0U};
   auto data_pos = data_.get();
 
-  auto current = PixelSet{.x = px_x_offset_, .y = 0U};
+  auto current_x = px_x_offset;
+  auto current_y = y_begin;
 
   // Loop //
   do {
@@ -74,16 +84,16 @@ Image::Image(Args const& args) noexcept
       data_pos += iter.lanes.size();
 
       // Update current pixel indices //
-      auto const x_max_reached = current.x > x_max;
+      auto const x_max_reached = current_x > x_max;
 
-      current.x = (~x_max_reached & (current.x + uset_simd_width)) | (x_max_reached & px_x_offset_);
-      current.y += uset_1 & x_max_reached;
+      current_x = (~x_max_reached & (current_x + uset_simd_width)) | (x_max_reached & px_x_offset);
+      current_y += 1U & x_max_reached.lanes[0];
 
       // Conver uint32's to floats and copy to px vector //
-      std::copy(current.x.lanes.cbegin(), current.x.lanes.cend(), px.lanes.begin());
+      std::copy(current_x.lanes.cbegin(), current_x.lanes.cend(), px.lanes.begin());
 
-      c.real = px * scaling_.real + frame_.lower.x;
-      c.imag = FloatSet{static_cast<float>(current.y.lanes[0])} * scaling_.imag + frame_.lower.y;
+      c.real = px * scaling.real + frame_.lower.x;
+      c.imag = FloatSet{static_cast<float>(current_y)} * scaling.imag + frame_.lower.y;
 
       // Clear out //
       iter ^= iter;
@@ -94,7 +104,7 @@ Image::Image(Args const& args) noexcept
       zsq.imag ^= zsq.imag;
     }
 
-  } while (__builtin_expect(data_pos != data_.get() + pixel_count_, 1));
+  } while (__builtin_expect(current_y != y_end, 1));
 }
 
 auto Image::save_pgm(std::string_view const filename) const noexcept -> bool {
