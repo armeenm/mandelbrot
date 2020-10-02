@@ -37,13 +37,13 @@ auto Image::calc_(std::uint32_t const y_begin, std::uint32_t const y_end) noexce
     return ret;
   }();
 
-  auto const x_max = IntSet{resolution_.x - 9U};
-  auto const scaling = Complex<FloatSet>{{frame_.width() / static_cast<float>(resolution_.x)},
-                                         {frame_.height() / static_cast<float>(resolution_.y)}};
+  auto const x_max = IntSet{resolution_.x - 9};
+  auto const scaling_real = FloatSet{frame_.width() / static_cast<float>(resolution_.x)};
+  auto const scaling_imag = frame_.height() / static_cast<float>(resolution_.y);
   auto const uset_iter_limit = IntSet{maxiter_ - 1};
 
-  auto c = Complex<FloatSet>{frame_.lower.x,
-                             FloatSet{static_cast<float>(y_begin)} * scaling.imag + frame_.lower.y};
+  auto c_real = FloatSet{frame_.lower.x};
+  auto c_imag = static_cast<float>(y_begin) * scaling_imag + frame_.lower.y;
   auto z = Complex<FloatSet>{};
   auto zsq = Complex<FloatSet>{};
   auto zold = Complex<FloatSet>{};
@@ -59,8 +59,8 @@ auto Image::calc_(std::uint32_t const y_begin, std::uint32_t const y_end) noexce
 
   // Loop //
   do {
-    z.imag = (z.real + z.real) * z.imag + c.imag;
-    z.real = zsq.real - zsq.imag + c.real;
+    z.imag = (z.real + z.real) * z.imag + c_imag;
+    z.real = zsq.real - zsq.imag + c_real;
     zsq.real = z.real * z.real;
     zsq.imag = z.imag * z.imag;
 
@@ -87,15 +87,17 @@ auto Image::calc_(std::uint32_t const y_begin, std::uint32_t const y_end) noexce
 
       // Update current pixel indices //
       auto const x_max_reached = current_x > x_max;
+      auto const all_max = _mm256_movemask_epi8(x_max_reached.vec);
 
       current_x = (~x_max_reached & (current_x + uset_simd_width)) | (x_max_reached & px_x_offset);
-      current_y += 1U & x_max_reached.lanes[0];
+      if (all_max == -1)
+        ++current_y;
 
       // Conver uint32's to floats and copy to px vector //
       std::copy(current_x.lanes.cbegin(), current_x.lanes.cend(), px.lanes.begin());
 
-      c.real = px * scaling.real + frame_.lower.x;
-      c.imag = FloatSet{static_cast<float>(current_y)} * scaling.imag + frame_.lower.y;
+      c_real = px * scaling_real + frame_.lower.x;
+      c_imag = static_cast<float>(current_y) * scaling_imag + frame_.lower.y;
 
       // Clear out //
       iter ^= iter;
