@@ -49,7 +49,7 @@ auto Image::calc_(n32 const y_begin, n32 const y_end) noexcept -> void {
 
   auto px = FloatSet{};
   auto iter = IntSet{0U};
-  auto empty = IntSet{0U};
+  auto done = IntSet{0U};
   auto period = IntSet{0U};
   auto data_pos = data_.get() + resolution_.x * y_begin;
 
@@ -63,23 +63,23 @@ auto Image::calc_(n32 const y_begin, n32 const y_end) noexcept -> void {
     zsq.real = z.real * z.real;
     zsq.imag = z.imag * z.imag;
 
-    iter += uset_1 & ~empty;
-    period += uset_1 & ~empty;
+    iter += uset_1 & ~done;
+    period += uset_1 & ~done;
 
-    // Check lane empty status //
+    // Check lane done status //
     auto const over_4 = (zsq.real + zsq.imag) > fset_4;
     auto const reached_iter_limit = iter > uset_iter_limit;
     auto const reached_period_limit = period > uset_maxperiod;
     auto const repeat = FloatSet{(z.real == zold.real) & (z.imag == zold.imag)};
 
-    empty |= reached_iter_limit | over_4 | repeat;
+    done |= reached_iter_limit | over_4 | repeat;
     iter = (iter & ~repeat) | (uset_iter_limit & repeat);
     period &= ~reached_period_limit;
     zold.real = (zold.real & ~reached_period_limit) | (z.real & reached_period_limit);
     zold.imag = (zold.imag & ~reached_period_limit) | (z.imag & reached_period_limit);
 
-    // Check if all current pixels are empty //
-    if (empty.movemask() == -1) {
+    // Check if all current pixels are done //
+    if (done.movemask() == -1) {
       // Update picture //
       std::memcpy(data_pos, iter.lanes.cbegin(), sizeof(iter.lanes));
       data_pos += iter.lanes.size();
@@ -102,7 +102,7 @@ auto Image::calc_(n32 const y_begin, n32 const y_end) noexcept -> void {
 
       // Clear out //
       iter ^= iter;
-      empty ^= empty;
+      done ^= done;
       z.real ^= z.real;
       z.imag ^= z.imag;
       zsq.real ^= zsq.real;
