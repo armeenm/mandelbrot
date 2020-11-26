@@ -67,6 +67,7 @@ set(BUILD_OPTS
   -floop-block
   -floop-interchange
   -floop-strip-mine
+  -fdiagnostics-color=always
   -Ofast)
 
 target_link_libraries(mandelbrot PRIVATE fmt::fmt Threads::Threads)

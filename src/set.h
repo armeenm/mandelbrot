@@ -13,6 +13,9 @@
 #define PS_COMP_HIDDEN(a, b, op, type) PS_COMP_HIDDEN2(a, b, op, type)
 #define PS_COMP(a, b, op) PS_COMP_HIDDEN(a, b, op, PS_COMP_TYPE)
 
+union FloatSet;
+template <typename T> union IntSet;
+
 union FloatSet {
   __m256 vec;
   std::array<f32, sizeof(vec) / sizeof(f32)> lanes;
@@ -24,7 +27,7 @@ union FloatSet {
       vec = _mm256_setzero_ps();
   }
 
-  [[nodiscard]] constexpr FloatSet(__m256 const& in) noexcept : vec{in} {}
+  [[nodiscard]] FloatSet(__m256 const& in) noexcept : vec{in} {}
   [[nodiscard]] constexpr FloatSet(decltype(lanes) const& in) noexcept : lanes{in} {}
   [[nodiscard]] constexpr FloatSet(f32 fill) noexcept {
     if (std::is_constant_evaluated())
@@ -114,7 +117,11 @@ union FloatSet {
     return os << '}';
   }
 
+  constexpr explicit operator IntSet<i32>() const noexcept;
+
   [[nodiscard]] auto movemask() const noexcept -> i32 { return _mm256_movemask_ps(vec); }
+
+  auto store_unaligned(float* const out) const noexcept -> void { _mm256_storeu_ps(out, vec); }
 };
 
 template <typename T> union IntSet {
@@ -248,7 +255,25 @@ public:
     return os << '}';
   }
 
+  constexpr explicit operator FloatSet() const noexcept {
+    // TODO: Ensure it's signed //
+
+    if constexpr (sizeof(T) != 4)
+      static_assert(always_false<T>, "Invalid size for conversion");
+
+    if (std::is_constant_evaluated()) {
+      auto floats = decltype(FloatSet::lanes){};
+      std::copy(lanes.cbegin(), lanes.cend(), floats.begin());
+      return FloatSet{floats};
+    } else
+      return FloatSet{_mm256_cvtepi32_ps(vec)};
+  }
+
   [[nodiscard]] auto movemask() const noexcept -> i32 { return _mm256_movemask_epi8(vec); }
+
+  auto store_unaligned(decltype(vec)* const out) const noexcept -> void {
+    _mm256_storeu_si256(out, vec);
+  }
 };
 
 [[nodiscard]] auto operator==(FloatSet const& a, FloatSet const& b) noexcept -> FloatSet;

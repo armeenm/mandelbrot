@@ -51,7 +51,7 @@ auto Image::calc_(n32 const y_begin, n32 const y_end) noexcept -> void {
   auto iter = IntSet{0U};
   auto done = IntSet{0U};
   auto period = IntSet{0U};
-  auto data_pos = data_.get() + resolution_.x * y_begin;
+  auto data_pos = reinterpret_cast<decltype(iter.vec)*>(data_.get() + resolution_.x * y_begin);
 
   auto current_x = px_x_offset;
   auto current_y = y_begin;
@@ -80,9 +80,10 @@ auto Image::calc_(n32 const y_begin, n32 const y_end) noexcept -> void {
 
     // Check if all current pixels are done //
     if (done.movemask() == -1) {
+      // TODO: Make this stuff aligned! //
       // Update picture //
-      std::memcpy(data_pos, iter.lanes.cbegin(), sizeof(iter.lanes));
-      data_pos += iter.lanes.size();
+      iter.store_unaligned(data_pos);
+      ++data_pos;
 
       // Update current pixel indices //
       auto const x_max_reached = current_x > x_max;
@@ -94,8 +95,8 @@ auto Image::calc_(n32 const y_begin, n32 const y_end) noexcept -> void {
       } else
         current_x += ~x_max_reached & uset_simd_width;
 
-      // Convert n32's to f32's and copy to px vector //
-      std::copy(current_x.lanes.cbegin(), current_x.lanes.cend(), px.lanes.begin());
+      // Update pixels from current_x position, converting from ints to floats */
+      px = static_cast<FloatSet>(current_x);
 
       c_real = px * scaling_real + frame_.lower.x;
       c_imag = static_cast<f32>(current_y) * scaling_imag + frame_.lower.y;

@@ -93,7 +93,7 @@ requires BitCastable<Dst, Src> auto inline bit_cast [[gnu::always_inline]] (Src 
   return dst;
 }
 
-template <typename...> bool constexpr always_false = false;
+template <typename T = void, typename...> bool constexpr always_false = false;
 
 struct Unit {};
 
