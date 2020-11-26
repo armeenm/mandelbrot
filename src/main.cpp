@@ -8,7 +8,7 @@
 
 auto constexpr inline filename_def = "mandelbrot.pgm";
 
-auto main(int const argc, char const* const* const argv) -> int {
+auto main(i32 const argc, char const* const* const argv) -> int {
   if (argc == 3 || argc > 4) {
     fmt::print("Usage: {} FILENAME [XRES YRES]", argv[0]);
     return -1;
@@ -17,7 +17,7 @@ auto main(int const argc, char const* const* const argv) -> int {
   auto const filename = (argc > 1) ? argv[1] : filename_def;
 
   auto constexpr stoi = [](std::string_view str) {
-    return static_cast<std::uint32_t>(std::stoul(str.data()));
+    return static_cast<n32>(std::stoul(str.data()));
   };
 
   auto const args = [=] {

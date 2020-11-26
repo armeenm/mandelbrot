@@ -63,6 +63,10 @@ set(BUILD_OPTS
   -fpeel-loops
   -fno-signed-zeros
   -fno-trapping-math
+  -fgraphite-identity
+  -floop-block
+  -floop-interchange
+  -floop-strip-mine
   -Ofast)
 
 target_link_libraries(mandelbrot PRIVATE fmt::fmt Threads::Threads)

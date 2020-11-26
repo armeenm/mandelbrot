@@ -15,7 +15,7 @@
 
 union FloatSet {
   __m256 vec;
-  std::array<float, sizeof(vec) / sizeof(float)> lanes;
+  std::array<f32, sizeof(vec) / sizeof(f32)> lanes;
 
   [[nodiscard]] constexpr FloatSet() noexcept {
     if (std::is_constant_evaluated())
@@ -26,7 +26,7 @@ union FloatSet {
 
   [[nodiscard]] constexpr FloatSet(__m256 const& in) noexcept : vec{in} {}
   [[nodiscard]] constexpr FloatSet(decltype(lanes) const& in) noexcept : lanes{in} {}
-  [[nodiscard]] constexpr FloatSet(float fill) noexcept {
+  [[nodiscard]] constexpr FloatSet(f32 fill) noexcept {
     if (std::is_constant_evaluated())
       for (auto&& lane : lanes)
         lane = fill;
@@ -68,15 +68,15 @@ union FloatSet {
     return *this;
   }
 
-  template <typename U>[[nodiscard]] auto operator^(U const& other) const noexcept -> FloatSet {
+  template <typename U> [[nodiscard]] auto operator^(U const& other) const noexcept -> FloatSet {
     return _mm256_xor_ps(vec, *reinterpret_cast<__m256 const*>(&other.vec));
   }
 
-  template <typename U>[[nodiscard]] auto operator&(U const& other) const noexcept -> FloatSet {
+  template <typename U> [[nodiscard]] auto operator&(U const& other) const noexcept -> FloatSet {
     return _mm256_and_ps(vec, *reinterpret_cast<__m256 const*>(&other.vec));
   }
 
-  template <typename U>[[nodiscard]] auto operator|(U const& other) const noexcept -> FloatSet {
+  template <typename U> [[nodiscard]] auto operator|(U const& other) const noexcept -> FloatSet {
     return _mm256_or_ps(vec, *reinterpret_cast<__m256 const*>(&other.vec));
   }
 
@@ -113,6 +113,8 @@ union FloatSet {
 
     return os << '}';
   }
+
+  [[nodiscard]] auto movemask() const noexcept -> i32 { return _mm256_movemask_ps(vec); }
 };
 
 template <typename T> union IntSet {
@@ -201,15 +203,15 @@ public:
     return *this;
   }
 
-  template <typename U>[[nodiscard]] auto operator^(U const& other) const noexcept -> IntSet {
+  template <typename U> [[nodiscard]] auto operator^(U const& other) const noexcept -> IntSet {
     return _mm256_xor_si256(vec, *reinterpret_cast<__m256i const*>(&other.vec));
   }
 
-  template <typename U>[[nodiscard]] auto operator&(U const& other) const noexcept -> IntSet {
+  template <typename U> [[nodiscard]] auto operator&(U const& other) const noexcept -> IntSet {
     return _mm256_and_si256(vec, *reinterpret_cast<__m256i const*>(&other.vec));
   }
 
-  template <typename U>[[nodiscard]] auto operator|(U const& other) const noexcept -> IntSet {
+  template <typename U> [[nodiscard]] auto operator|(U const& other) const noexcept -> IntSet {
     return _mm256_or_si256(vec, *reinterpret_cast<__m256i const*>(&other.vec));
   }
 
@@ -245,6 +247,8 @@ public:
 
     return os << '}';
   }
+
+  [[nodiscard]] auto movemask() const noexcept -> i32 { return _mm256_movemask_epi8(vec); }
 };
 
 [[nodiscard]] auto operator==(FloatSet const& a, FloatSet const& b) noexcept -> FloatSet;

@@ -8,7 +8,6 @@
 #include <cstring>
 #include <fmt/compile.h>
 #include <fmt/core.h>
-#include <immintrin.h>
 #include <numeric>
 #include <thread>
 #include <vector>
@@ -24,13 +23,13 @@ Image::Image(Args const& args) noexcept
     threads.emplace_back(&Image::calc_, this, i * div, (i + 1) * div);
 }
 
-auto Image::calc_(std::uint32_t const y_begin, std::uint32_t const y_end) noexcept -> void {
+auto Image::calc_(n32 const y_begin, n32 const y_end) noexcept -> void {
   auto const start = std::chrono::high_resolution_clock::now();
 
   auto constexpr uset_1 = IntSet{1U};
   auto constexpr fset_4 = FloatSet{4.0F};
   auto constexpr uset_maxperiod = IntSet{150U};
-  auto constexpr uset_simd_width = IntSet{static_cast<std::uint32_t>(uset_1.lanes.size())};
+  auto constexpr uset_simd_width = IntSet{static_cast<n32>(uset_1.lanes.size())};
   auto constexpr px_x_offset = []() {
     auto ret = IntSet{0U};
     std::iota(ret.lanes.begin(), ret.lanes.end(), 0);
@@ -38,12 +37,12 @@ auto Image::calc_(std::uint32_t const y_begin, std::uint32_t const y_end) noexce
   }();
 
   auto const x_max = IntSet{resolution_.x - 9};
-  auto const scaling_real = FloatSet{frame_.width() / static_cast<float>(resolution_.x)};
-  auto const scaling_imag = frame_.height() / static_cast<float>(resolution_.y);
+  auto const scaling_real = FloatSet{frame_.width() / static_cast<f32>(resolution_.x)};
+  auto const scaling_imag = frame_.height() / static_cast<f32>(resolution_.y);
   auto const uset_iter_limit = IntSet{maxiter_ - 1};
 
   auto c_real = FloatSet{frame_.lower.x};
-  auto c_imag = static_cast<float>(y_begin) * scaling_imag + frame_.lower.y;
+  auto c_imag = static_cast<f32>(y_begin) * scaling_imag + frame_.lower.y;
   auto z = Complex<FloatSet>{};
   auto zsq = Complex<FloatSet>{};
   auto zold = Complex<FloatSet>{};
@@ -80,24 +79,26 @@ auto Image::calc_(std::uint32_t const y_begin, std::uint32_t const y_end) noexce
     zold.imag = (zold.imag & ~reached_period_limit) | (z.imag & reached_period_limit);
 
     // Check if all current pixels are empty //
-    if (_mm256_movemask_epi8(empty.vec) == -1) {
+    if (empty.movemask() == -1) {
       // Update picture //
       std::memcpy(data_pos, iter.lanes.cbegin(), sizeof(iter.lanes));
       data_pos += iter.lanes.size();
 
       // Update current pixel indices //
       auto const x_max_reached = current_x > x_max;
-      auto const all_max = _mm256_movemask_epi8(x_max_reached.vec);
 
-      current_x = (~x_max_reached & (current_x + uset_simd_width)) | (x_max_reached & px_x_offset);
-      if (all_max == -1)
+      /* If all pixels are done, move on to the next row */
+      if (x_max_reached.movemask() == -1) {
+        current_x = px_x_offset;
         ++current_y;
+      } else
+        current_x += ~x_max_reached & uset_simd_width;
 
-      // Conver uint32's to floats and copy to px vector //
+      // Convert n32's to f32's and copy to px vector //
       std::copy(current_x.lanes.cbegin(), current_x.lanes.cend(), px.lanes.begin());
 
       c_real = px * scaling_real + frame_.lower.x;
-      c_imag = static_cast<float>(current_y) * scaling_imag + frame_.lower.y;
+      c_imag = static_cast<f32>(current_y) * scaling_imag + frame_.lower.y;
 
       // Clear out //
       iter ^= iter;
