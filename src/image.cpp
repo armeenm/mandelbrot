@@ -17,14 +17,14 @@ Image::Image(Args const& args) noexcept
                                                                                     args.threads} {
   auto threads = std::vector<std::jthread>{};
 
-  // TODO: Make this stuff more robust
-  auto const div = resolution_.y / threads_;
+  // TODO: Make this stuff more robust //
+  auto const div = pixel_count_ / threads_;
   for (auto i = 0U; i < threads_; ++i)
     threads.emplace_back(&Image::calc_, this, i * div, (i + 1) * div);
 }
 
-auto Image::calc_(n32 const y_begin, n32 const y_end) noexcept -> void {
-  auto const start = std::chrono::high_resolution_clock::now();
+auto Image::calc_(n32 const start, n32 const end) noexcept -> void {
+  auto const t_start = std::chrono::high_resolution_clock::now();
 
   auto constexpr uset_1 = IntSet{1U};
   auto constexpr fset_4 = FloatSet{4.0F};
@@ -41,8 +41,11 @@ auto Image::calc_(n32 const y_begin, n32 const y_end) noexcept -> void {
   auto const scaling_imag = frame_.height() / static_cast<f32>(resolution_.y);
   auto const uset_iter_limit = IntSet{maxiter_ - 1};
 
+  auto current_x = IntSet<n32>{start % resolution_.x} + px_x_offset;
+  auto current_y = start / resolution_.x;
+
   auto c_real = FloatSet{frame_.lower.x};
-  auto c_imag = static_cast<f32>(y_begin) * scaling_imag + frame_.lower.y;
+  auto c_imag = static_cast<f32>(current_y) * scaling_imag + frame_.lower.y;
   auto z = Complex<FloatSet>{};
   auto zsq = Complex<FloatSet>{};
   auto zold = Complex<FloatSet>{};
@@ -51,10 +54,7 @@ auto Image::calc_(n32 const y_begin, n32 const y_end) noexcept -> void {
   auto iter = IntSet{0U};
   auto done = IntSet{0U};
   auto period = IntSet{0U};
-  auto data_pos = reinterpret_cast<decltype(iter.vec)*>(data_.get() + resolution_.x * y_begin);
-
-  auto current_x = px_x_offset;
-  auto current_y = y_begin;
+  auto data_pos = start;
 
   // Loop //
   do {
@@ -80,10 +80,9 @@ auto Image::calc_(n32 const y_begin, n32 const y_end) noexcept -> void {
 
     // Check if all current pixels are done //
     if (done.movemask() == -1) {
-      // TODO: Make this stuff aligned! //
       // Update picture //
-      iter.store_unaligned(data_pos);
-      ++data_pos;
+      iter.store(reinterpret_cast<decltype(iter.vec)*>(data_.get() + data_pos));
+      data_pos += static_cast<n32>(iter.lanes.size());
 
       // Update current pixel indices //
       auto const x_max_reached = current_x > x_max;
@@ -102,18 +101,16 @@ auto Image::calc_(n32 const y_begin, n32 const y_end) noexcept -> void {
       c_imag = static_cast<f32>(current_y) * scaling_imag + frame_.lower.y;
 
       // Clear out //
-      iter ^= iter;
-      done ^= done;
-      z.real ^= z.real;
-      z.imag ^= z.imag;
-      zsq.real ^= zsq.real;
-      zsq.imag ^= zsq.imag;
+      iter = 0;
+      done = 0;
+      z = {0, 0};
+      zsq = {0, 0};
     }
 
-  } while (__builtin_expect(current_y != y_end, 1));
+  } while (__builtin_expect(data_pos < end, 1));
 
-  auto const end = std::chrono::high_resolution_clock::now();
-  fmt::print("calc_({}, {}): {}ms\n", y_begin, y_end, to_ms(start, end));
+  auto const t_end = std::chrono::high_resolution_clock::now();
+  fmt::print("calc_({}, {}): {}ms\n", start, end, to_ms(t_start, t_end));
 }
 
 auto Image::save_pgm(std::string_view const filename) const noexcept -> bool {

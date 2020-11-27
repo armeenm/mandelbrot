@@ -4,11 +4,7 @@
 #include "set.h"
 #include "util.h"
 
-#include <algorithm>
-#include <array>
-#include <fmt/ostream.h>
 #include <memory>
-#include <numeric>
 #include <string_view>
 #include <thread>
 
@@ -65,5 +61,5 @@ private:
   n32 threads_;
 
   n32 pixel_count_ = resolution_.x * resolution_.y;
-  std::unique_ptr<n32[]> data_ = std::make_unique<n32[]>(pixel_count_);
+  std::unique_ptr<n32[]> data_{new (std::align_val_t(64)) n32[pixel_count_]};
 };

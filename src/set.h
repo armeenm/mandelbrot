@@ -121,6 +121,7 @@ union FloatSet {
 
   [[nodiscard]] auto movemask() const noexcept -> i32 { return _mm256_movemask_ps(vec); }
 
+  auto store(float* const out) const noexcept -> void { _mm256_store_ps(out, vec); }
   auto store_unaligned(float* const out) const noexcept -> void { _mm256_storeu_ps(out, vec); }
 };
 
@@ -270,6 +271,8 @@ public:
   }
 
   [[nodiscard]] auto movemask() const noexcept -> i32 { return _mm256_movemask_epi8(vec); }
+
+  auto store(decltype(vec)* const out) const noexcept -> void { _mm256_store_si256(out, vec); }
 
   auto store_unaligned(decltype(vec)* const out) const noexcept -> void {
     _mm256_storeu_si256(out, vec);
