@@ -121,8 +121,15 @@ union FloatSet {
 
   [[nodiscard]] auto movemask() const noexcept -> i32 { return _mm256_movemask_ps(vec); }
 
-  auto store(float* const out) const noexcept -> void { _mm256_store_ps(out, vec); }
-  auto store_unaligned(float* const out) const noexcept -> void { _mm256_storeu_ps(out, vec); }
+  auto store(void* const out) const noexcept -> void {
+    _mm256_store_ps(reinterpret_cast<float*>(out), vec);
+  }
+  auto store_unaligned(void* const out) const noexcept -> void {
+    _mm256_storeu_ps(reinterpret_cast<float*>(out), vec);
+  }
+  auto stream_store(void* const out) const noexcept -> void {
+    _mm256_stream_ps(reinterpret_cast<float*>(out), vec);
+  }
 };
 
 template <typename T> union IntSet {
@@ -272,10 +279,16 @@ public:
 
   [[nodiscard]] auto movemask() const noexcept -> i32 { return _mm256_movemask_epi8(vec); }
 
-  auto store(decltype(vec)* const out) const noexcept -> void { _mm256_store_si256(out, vec); }
+  auto store(void* const out) const noexcept -> void {
+    _mm256_store_si256(reinterpret_cast<decltype(vec)*>(out), vec);
+  }
 
-  auto store_unaligned(decltype(vec)* const out) const noexcept -> void {
-    _mm256_storeu_si256(out, vec);
+  auto store_unaligned(void* const out) const noexcept -> void {
+    _mm256_storeu_si256(reinterpret_cast<decltype(vec)*>(out), vec);
+  }
+
+  auto stream_store(void* const out) const noexcept -> void {
+    _mm256_stream_si256(reinterpret_cast<decltype(vec)*>(out), vec);
   }
 };
 

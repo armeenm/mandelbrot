@@ -81,7 +81,7 @@ auto Image::calc_(n32 const start, n32 const end) noexcept -> void {
     // Check if all current pixels are done //
     if (done.movemask() == -1) {
       // Update picture //
-      iter.store(reinterpret_cast<decltype(iter.vec)*>(data_.get() + data_pos));
+      iter.stream_store(data_.get() + data_pos);
       data_pos += static_cast<n32>(iter.lanes.size());
 
       // Update current pixel indices //
