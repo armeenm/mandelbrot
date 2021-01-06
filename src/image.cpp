@@ -40,6 +40,7 @@ auto Image::calc_(n32 const start, n32 const end) noexcept -> void {
   auto const scaling_real = FloatSet{frame_.width() / static_cast<f32>(resolution_.x)};
   auto const scaling_imag = frame_.height() / static_cast<f32>(resolution_.y);
   auto const uset_iter_limit = IntSet{maxiter_ - 1};
+  auto const data_end = data_.get() + end;
 
   auto current_x = IntSet<n32>{start % resolution_.x} + px_x_offset;
   auto current_y = start / resolution_.x;
@@ -54,7 +55,7 @@ auto Image::calc_(n32 const start, n32 const end) noexcept -> void {
   auto iter = IntSet{0U};
   auto done = IntSet{0U};
   auto period = IntSet{0U};
-  auto data_pos = start;
+  auto data = data_.get() + start;
 
   // Loop //
   do {
@@ -81,8 +82,8 @@ auto Image::calc_(n32 const start, n32 const end) noexcept -> void {
     // Check if all current pixels are done //
     if (done.movemask() == -1) {
       // Update picture //
-      iter.stream_store(data_.get() + data_pos);
-      data_pos += static_cast<n32>(iter.lanes.size());
+      iter.stream_store(data);
+      data += static_cast<n32>(iter.lanes.size());
 
       // Update current pixel indices //
       auto const x_max_reached = current_x > x_max;
@@ -107,7 +108,7 @@ auto Image::calc_(n32 const start, n32 const end) noexcept -> void {
       zsq = {0, 0};
     }
 
-  } while (__builtin_expect(data_pos < end, 1));
+  } while (__builtin_expect(data < data_end, 1));
 
   auto const t_end = std::chrono::high_resolution_clock::now();
   fmt::print("calc_({}, {}): {}ms\n", start, end, to_ms(t_start, t_end));
