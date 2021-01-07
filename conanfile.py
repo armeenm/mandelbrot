@@ -5,7 +5,7 @@ class Mandelbrot(ConanFile):
     version = '1.0.0'
     settings = 'os', 'compiler', 'build_type', 'arch'
     generators = 'cmake_find_package_multi'
-    requires = ['fmt/7.0.3']
+    requires = ['fmt/7.1.3']
     build_policy = 'missing'
 
     def build(self):
