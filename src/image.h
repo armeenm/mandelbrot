@@ -32,7 +32,7 @@ public:
     Coord resolution = {.x = 1024U, .y = 768U};
     Frame frame = {.lower = {-2.0F, -1.2F}, .upper = {1.0F, 1.2F}};
     n32 maxiter = 4096U;
-    n32 threads = std::jthread::hardware_concurrency();
+    n32 thread_count = std::jthread::hardware_concurrency();
   };
 
   explicit Image(Args const&) noexcept;
@@ -58,7 +58,7 @@ private:
   Coord resolution_;
   Frame frame_;
   n32 maxiter_;
-  n32 threads_;
+  n32 thread_count_;
 
   n32 pixel_count_ = resolution_.x * resolution_.y;
   std::unique_ptr<n32[]> data_{new (std::align_val_t(64)) n32[pixel_count_]};

@@ -2,6 +2,7 @@
 #include "util.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <cstdio>
@@ -13,14 +14,17 @@
 #include <vector>
 
 Image::Image(Args const& args) noexcept
-    : resolution_{args.resolution}, frame_{args.frame}, maxiter_{args.maxiter}, threads_{
-                                                                                    args.threads} {
+    : resolution_{args.resolution}, frame_{args.frame}, maxiter_{args.maxiter},
+      thread_count_{args.thread_count} {
+
   auto threads = std::vector<std::jthread>{};
 
   // TODO: Make this stuff more robust //
-  auto const div = pixel_count_ / threads_;
-  for (auto i = 0U; i < threads_; ++i)
+  auto const div = pixel_count_ / thread_count_;
+  for (auto i = 0U; i < thread_count_ - 1; ++i)
     threads.emplace_back(&Image::calc_, this, i * div, (i + 1) * div);
+
+  calc_((thread_count_ - 1) * div, thread_count_ * div);
 }
 
 auto Image::calc_(n32 const start, n32 const end) noexcept -> void {
