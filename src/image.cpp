@@ -51,13 +51,11 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
     [[likely]] {
 
       for (auto i = 0U; i < block_size; ++i) {
-        pxidx += simd_width;
-
         auto current_x = IntSet<n32>{pxidx % resolution_.x} + px_x_offset;
-        auto current_y = pxidx / resolution_.x;
+        auto current_y = IntSet<n32>{pxidx / resolution_.x};
 
         auto c_real = static_cast<FloatSet>(current_x) * scaling_real + FloatSet{frame_.lower.x};
-        auto c_imag = static_cast<f32>(current_y) * scaling_imag + frame_.lower.y;
+        auto c_imag = static_cast<FloatSet>(current_y) * scaling_imag + frame_.lower.y;
 
         auto z = Complex<FloatSet>{};
         auto zsq = Complex<FloatSet>{};
@@ -89,6 +87,8 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
 
         // Update picture //
         iter.stream_store(&data[pxidx]);
+
+        pxidx += simd_width;
       }
     }
 
