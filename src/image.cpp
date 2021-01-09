@@ -9,6 +9,7 @@
 #include <cstring>
 #include <fmt/compile.h>
 #include <fmt/core.h>
+#include <memory>
 #include <numeric>
 #include <thread>
 #include <vector>
@@ -38,10 +39,11 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
     return ret;
   }();
 
-  auto const scaling_real = FloatSet{frame_.width() / static_cast<f32>(resolution_.x)};
-  auto const scaling_imag = frame_.height() / static_cast<f32>(resolution_.y);
-  auto const uset_iter_limit = IntSet{maxiter_ - 1};
-  auto const data = data_.get();
+  auto const uset_maxiter = IntSet{maxiter_};
+  auto const uset_limiter = IntSet{maxiter_ - 1U};
+
+  auto const scaling = Complex<FloatSet>{frame_.width() / static_cast<f32>(resolution_.x),
+                                         frame_.height() / static_cast<f32>(resolution_.y)};
 
   auto zold = Complex<FloatSet>{};
   auto period = IntSet{0U};
@@ -51,20 +53,40 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
     [[likely]] {
 
       for (auto i = 0U; i < block_size; ++i) {
-        auto current_x = IntSet<n32>{pxidx % resolution_.x} + px_x_offset;
-        auto current_y = IntSet<n32>{pxidx / resolution_.x};
 
-        auto c_real = static_cast<FloatSet>(current_x) * scaling_real + FloatSet{frame_.lower.x};
-        auto c_imag = static_cast<FloatSet>(current_y) * scaling_imag + frame_.lower.y;
+        auto const [c, inside] = [&] {
+          auto const px = Complex<IntSet<n32>>{IntSet{pxidx % resolution_.x} + px_x_offset,
+                                               pxidx / resolution_.x};
+          auto const px_float =
+              Complex{static_cast<FloatSet>(px.real), static_cast<FloatSet>(px.imag)};
+
+          auto const _c = Complex{px_float.real * scaling.real + frame_.lower.x,
+                                  px_float.imag * scaling.imag + frame_.lower.y};
+
+          auto const x = _c.real;
+          auto const y = _c.imag;
+
+          auto const a = x - 0.25F;
+          auto const b = x + 1.0F;
+
+          auto const q = a * a + y * y;
+
+          auto const in_cardioid = q * (q + a) <= FloatSet{0.25F} * y * y;
+          auto const in_b2 = b * b + y * y <= 0.0625F;
+
+          return std::make_pair(std::move(_c),
+                                IntSet<n32>{bit_cast<__m256i>((in_cardioid | in_b2).vec)});
+        }();
 
         auto z = Complex<FloatSet>{};
         auto zsq = Complex<FloatSet>{};
-        auto iter = IntSet{0U};
-        auto done = IntSet{0U};
 
-        do {
-          z.imag = (z.real + z.real) * z.imag + c_imag;
-          z.real = zsq.real - zsq.imag + c_real;
+        auto iter = uset_maxiter & inside;
+        auto done = inside;
+
+        while (done.movemask() != -1) {
+          z.imag = (z.real + z.real) * z.imag + c.imag;
+          z.real = zsq.real - zsq.imag + c.real;
           zsq.real = z.real * z.real;
           zsq.imag = z.imag * z.imag;
 
@@ -73,20 +95,19 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
 
           // Check lane done status //
           auto const over_4 = (zsq.real + zsq.imag) > fset_4;
-          auto const reached_iter_limit = iter > uset_iter_limit;
+          auto const reached_iter_limit = iter > uset_limiter;
           auto const reached_period_limit = period > uset_maxperiod;
           auto const repeat = FloatSet{(z.real == zold.real) & (z.imag == zold.imag)};
 
           done |= reached_iter_limit | over_4 | repeat;
-          iter = (iter & ~repeat) | (uset_iter_limit & repeat);
+          iter = (iter & ~repeat) | (uset_maxiter & repeat);
           period &= ~reached_period_limit;
           zold.real = (zold.real & ~reached_period_limit) | (z.real & reached_period_limit);
           zold.imag = (zold.imag & ~reached_period_limit) | (z.imag & reached_period_limit);
-
-        } while (done.movemask() != -1);
+        }
 
         // Update picture //
-        iter.stream_store(&data[pxidx]);
+        iter.stream_store(&data_[pxidx]);
 
         pxidx += simd_width;
       }
