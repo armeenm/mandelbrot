@@ -8,6 +8,8 @@
 #include <string_view>
 #include <thread>
 
+auto constexpr inline img_al = std::align_val_t{64};
+
 template <typename T> struct GenCoord {
   T x, y;
 
@@ -27,6 +29,7 @@ public:
   using Coord = GenCoord<n32>;
   using PixelSet = GenCoord<IntSet<n32>>;
   using Frame = GenFrame<f32>;
+  using ThreadPool = std::vector<std::jthread>;
 
   struct Args {
     Coord resolution = {.x = 1024U, .y = 768U};
@@ -45,21 +48,23 @@ public:
 
   ~Image() = default;
 
-  [[nodiscard, gnu::cold]] auto frame() const noexcept { return frame_; }
   [[nodiscard, gnu::cold]] auto resolution() const noexcept { return resolution_; }
+  [[nodiscard, gnu::cold]] auto frame() const noexcept { return frame_; }
   [[nodiscard, gnu::cold]] auto maxiter() const noexcept { return maxiter_; }
   [[nodiscard, gnu::cold]] auto data() const noexcept { return data_.get(); }
 
   auto save_pgm(std::string_view filename) const noexcept -> bool;
 
 private:
-  auto calc_(n32 y_begin, n32 y_end) noexcept -> void;
+  auto calc_(std::atomic<n32>& idx) noexcept -> void;
 
   Coord resolution_;
   Frame frame_;
   n32 maxiter_;
+
   n32 thread_count_;
 
   n32 pixel_count_ = resolution_.x * resolution_.y;
-  std::unique_ptr<n32[]> data_{new (std::align_val_t(64)) n32[pixel_count_]};
+  std::unique_ptr<n32[], void (*)(void*)> data_{new (img_al) n32[pixel_count_],
+                                                [](void* p) { operator delete[](p, img_al); }};
 };

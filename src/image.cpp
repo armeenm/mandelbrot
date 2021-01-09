@@ -17,52 +17,56 @@ Image::Image(Args const& args) noexcept
     : resolution_{args.resolution}, frame_{args.frame}, maxiter_{args.maxiter},
       thread_count_{args.thread_count} {
 
-  auto threads = std::vector<std::jthread>{};
+  auto thread_pool = ThreadPool{};
+  auto idx = std::atomic<n32>{};
 
-  // TODO: Make this stuff more robust //
-  auto const div = pixel_count_ / thread_count_;
-  for (auto i = 0U; i < thread_count_ - 1; ++i)
-    threads.emplace_back(&Image::calc_, this, i * div, (i + 1) * div);
-
-  calc_((thread_count_ - 1) * div, thread_count_ * div);
+  for (auto i = 0U; i < thread_count_; ++i)
+    thread_pool.emplace_back(&Image::calc_, this, std::ref(idx));
 }
 
-auto Image::calc_(n32 const start, n32 const end) noexcept -> void {
+auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
   auto const t_start = std::chrono::high_resolution_clock::now();
 
   auto constexpr uset_1 = IntSet{1U};
   auto constexpr fset_4 = FloatSet{4.0F};
   auto constexpr uset_maxperiod = IntSet{150U};
-  auto constexpr uset_simd_width = IntSet{static_cast<n32>(uset_1.lanes.size())};
+  auto constexpr simd_width = static_cast<n32>(uset_1.lanes.size());
   auto constexpr px_x_offset = []() {
     auto ret = IntSet{0U};
     std::iota(ret.lanes.begin(), ret.lanes.end(), 0);
     return ret;
   }();
 
-  auto const x_max = IntSet{resolution_.x - 9};
   auto const scaling_real = FloatSet{frame_.width() / static_cast<f32>(resolution_.x)};
   auto const scaling_imag = frame_.height() / static_cast<f32>(resolution_.y);
   auto const uset_iter_limit = IntSet{maxiter_ - 1};
-  auto const data_end = data_.get() + end;
+  auto const data = data_.get();
 
-  auto current_x = IntSet<n32>{start % resolution_.x} + px_x_offset;
-  auto current_y = start / resolution_.x;
-
-  auto c_real = FloatSet{frame_.lower.x};
-  auto c_imag = static_cast<f32>(current_y) * scaling_imag + frame_.lower.y;
   auto z = Complex<FloatSet>{};
   auto zsq = Complex<FloatSet>{};
   auto zold = Complex<FloatSet>{};
-
-  auto px = FloatSet{};
   auto iter = IntSet{0U};
   auto done = IntSet{0U};
   auto period = IntSet{0U};
-  auto data = data_.get() + start;
+  auto pxidx = n32{};
+  auto current_x = IntSet<n32>{};
+  auto current_y = n32{};
+  auto c_real = FloatSet{};
+  auto c_imag = f32{};
 
-  // Loop //
-  do {
+  auto update = [&] {
+    pxidx = idx.fetch_add(simd_width, std::memory_order_relaxed);
+
+    current_x = IntSet<n32>{pxidx % resolution_.x} + px_x_offset;
+    current_y = pxidx / resolution_.x;
+
+    c_real = static_cast<FloatSet>(current_x) * scaling_real + FloatSet{frame_.lower.x};
+    c_imag = static_cast<f32>(current_y) * scaling_imag + frame_.lower.y;
+  };
+
+  update();
+
+  for (;;) {
     z.imag = (z.real + z.real) * z.imag + c_imag;
     z.real = zsq.real - zsq.imag + c_real;
     zsq.real = z.real * z.real;
@@ -86,24 +90,11 @@ auto Image::calc_(n32 const start, n32 const end) noexcept -> void {
     // Check if all current pixels are done //
     if (done.movemask() == -1) {
       // Update picture //
-      iter.stream_store(data);
-      data += static_cast<n32>(iter.lanes.size());
+      iter.stream_store(&data[pxidx]);
 
-      // Update current pixel indices //
-      auto const x_max_reached = current_x > x_max;
-
-      /* If all pixels are done, move on to the next row */
-      if (x_max_reached.movemask() == -1) {
-        current_x = px_x_offset;
-        ++current_y;
-      } else
-        current_x += ~x_max_reached & uset_simd_width;
-
-      // Update pixels from current_x position, converting from ints to floats */
-      px = static_cast<FloatSet>(current_x);
-
-      c_real = px * scaling_real + frame_.lower.x;
-      c_imag = static_cast<f32>(current_y) * scaling_imag + frame_.lower.y;
+      update();
+      if (pxidx >= pixel_count_) [[unlikely]]
+        break;
 
       // Clear out //
       iter = 0;
@@ -111,11 +102,10 @@ auto Image::calc_(n32 const start, n32 const end) noexcept -> void {
       z = {0, 0};
       zsq = {0, 0};
     }
-
-  } while (__builtin_expect(data < data_end, 1));
+  }
 
   auto const t_end = std::chrono::high_resolution_clock::now();
-  fmt::print("calc_({}, {}): {}ms\n", start, end, to_ms(t_start, t_end));
+  fmt::print("calc_(): {}ms\n", to_ms(t_start, t_end));
 }
 
 auto Image::save_pgm(std::string_view const filename) const noexcept -> bool {

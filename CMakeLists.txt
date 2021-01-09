@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12...3.18)
+cmake_minimum_required(VERSION 3.12...3.19)
 
 include(cmake/BuildType.cmake)
 include(cmake/ExportCompileCommands.cmake)
@@ -30,7 +30,9 @@ add_executable(mandelbrot ${SRCS})
 
 target_include_directories(mandelbrot PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-set(BUILD_OPTS
+set(LINK_COMPILE_OPTS)
+set(COMPILE_OPTS
+  ${LINK_COMPILE_OPTS}
   -march=native
   -Wshadow
   -Wduplicated-cond
@@ -44,8 +46,16 @@ set(BUILD_OPTS
   -Wextra
   -Wconversion
   -Wpedantic
-  -pipe
-  -flto
+  -pipe)
+set(LINK_OPTS ${LINK_COMPILE_OPTS})
+
+set(DEBUG_LINK_COMPILE_OPTS -fno-omit-frame-pointer -fsanitize=address,undefined)
+set(DEBUG_COMPILE_OPTS ${DEBUG_LINK_COMPILE_OPTS})
+set(DEBUG_LINK_OPTS ${DEBUG_LINK_COMPILE_OPTS})
+
+set(RELEASE_LINK_COMPILE_OPTS -flto)
+set(RELEASE_COMPILE_OPTS
+  ${RELEASE_LINK_COMPILE_OPTS}
   -fmerge-all-constants
   -fmodulo-sched-allow-regmoves
   -fgcse-sm
@@ -69,10 +79,19 @@ set(BUILD_OPTS
   -floop-strip-mine
   -fdiagnostics-color=always
   -Ofast)
+set(RELEASE_LINK_OPTS ${RELEASE_LINK_COMPILE_OPTS})
+
+target_compile_features(mandelbrot PRIVATE cxx_std_20)
+target_compile_options(mandelbrot PRIVATE
+  ${COMPILE_OPTS}
+  $<$<CONFIG:DEBUG>:${DEBUG_COMPILE_OPTS}>
+  $<$<CONFIG:RELEASE>:${RELEASE_COMPILE_OPTS}>)
 
 target_link_libraries(mandelbrot PRIVATE fmt::fmt Threads::Threads)
-target_compile_options(mandelbrot PRIVATE ${BUILD_OPTS})
-target_compile_features(mandelbrot PRIVATE cxx_std_20)
+target_link_options(mandelbrot PRIVATE
+  ${LINK_OPTS}
+  $<$<CONFIG:DEBUG>:${DEBUG_LINK_OPTS}>
+  $<$<CONFIG:RELEASE>:${RELEASE_LINK_OPTS}>)
 
 if(FORCE_COLORED_OUTPUT OR CMAKE_GENERATOR MATCHES "^Ninja")
   add_compile_options(
