@@ -27,6 +27,7 @@ Image::Image(Args const& args) noexcept
 auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
   auto const t_start = std::chrono::high_resolution_clock::now();
 
+  auto constexpr block_size = 1024U;
   auto constexpr uset_1 = IntSet{1U};
   auto constexpr fset_4 = FloatSet{4.0F};
   auto constexpr uset_maxperiod = IntSet{150U};
@@ -46,45 +47,49 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
   auto period = IntSet{0U};
   auto pxidx = n32{};
 
-  while ((pxidx = idx.fetch_add(simd_width, std::memory_order_relaxed)) < pixel_count_)
+  while ((pxidx = idx.fetch_add(simd_width * block_size, std::memory_order_relaxed)) < pixel_count_)
     [[likely]] {
 
-      auto current_x = IntSet<n32>{pxidx % resolution_.x} + px_x_offset;
-      auto current_y = pxidx / resolution_.x;
+      for (auto i = 0U; i < block_size; ++i) {
+        pxidx += simd_width;
 
-      auto c_real = static_cast<FloatSet>(current_x) * scaling_real + FloatSet{frame_.lower.x};
-      auto c_imag = static_cast<f32>(current_y) * scaling_imag + frame_.lower.y;
+        auto current_x = IntSet<n32>{pxidx % resolution_.x} + px_x_offset;
+        auto current_y = pxidx / resolution_.x;
 
-      auto z = Complex<FloatSet>{};
-      auto zsq = Complex<FloatSet>{};
-      auto iter = IntSet{0U};
-      auto done = IntSet{0U};
+        auto c_real = static_cast<FloatSet>(current_x) * scaling_real + FloatSet{frame_.lower.x};
+        auto c_imag = static_cast<f32>(current_y) * scaling_imag + frame_.lower.y;
 
-      do {
-        z.imag = (z.real + z.real) * z.imag + c_imag;
-        z.real = zsq.real - zsq.imag + c_real;
-        zsq.real = z.real * z.real;
-        zsq.imag = z.imag * z.imag;
+        auto z = Complex<FloatSet>{};
+        auto zsq = Complex<FloatSet>{};
+        auto iter = IntSet{0U};
+        auto done = IntSet{0U};
 
-        iter += uset_1 & ~done;
-        period += uset_1 & ~done;
+        do {
+          z.imag = (z.real + z.real) * z.imag + c_imag;
+          z.real = zsq.real - zsq.imag + c_real;
+          zsq.real = z.real * z.real;
+          zsq.imag = z.imag * z.imag;
 
-        // Check lane done status //
-        auto const over_4 = (zsq.real + zsq.imag) > fset_4;
-        auto const reached_iter_limit = iter > uset_iter_limit;
-        auto const reached_period_limit = period > uset_maxperiod;
-        auto const repeat = FloatSet{(z.real == zold.real) & (z.imag == zold.imag)};
+          iter += uset_1 & ~done;
+          period += uset_1 & ~done;
 
-        done |= reached_iter_limit | over_4 | repeat;
-        iter = (iter & ~repeat) | (uset_iter_limit & repeat);
-        period &= ~reached_period_limit;
-        zold.real = (zold.real & ~reached_period_limit) | (z.real & reached_period_limit);
-        zold.imag = (zold.imag & ~reached_period_limit) | (z.imag & reached_period_limit);
+          // Check lane done status //
+          auto const over_4 = (zsq.real + zsq.imag) > fset_4;
+          auto const reached_iter_limit = iter > uset_iter_limit;
+          auto const reached_period_limit = period > uset_maxperiod;
+          auto const repeat = FloatSet{(z.real == zold.real) & (z.imag == zold.imag)};
 
-      } while (done.movemask() != -1);
+          done |= reached_iter_limit | over_4 | repeat;
+          iter = (iter & ~repeat) | (uset_iter_limit & repeat);
+          period &= ~reached_period_limit;
+          zold.real = (zold.real & ~reached_period_limit) | (z.real & reached_period_limit);
+          zold.imag = (zold.imag & ~reached_period_limit) | (z.imag & reached_period_limit);
 
-      // Update picture //
-      iter.stream_store(&data[pxidx]);
+        } while (done.movemask() != -1);
+
+        // Update picture //
+        iter.stream_store(&data[pxidx]);
+      }
     }
 
   auto const t_end = std::chrono::high_resolution_clock::now();
