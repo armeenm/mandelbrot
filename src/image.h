@@ -32,7 +32,7 @@ public:
   using ThreadPool = std::vector<std::jthread>;
 
   struct Args {
-    Coord resolution = {.x = 1024U, .y = 768U};
+    Coord resolution = {.x = 1920U, .y = 1080U};
     Frame frame = {.lower = {-2.0F, -1.2F}, .upper = {1.0F, 1.2F}};
     n32 maxiter = 4096U;
     n32 thread_count = std::jthread::hardware_concurrency();

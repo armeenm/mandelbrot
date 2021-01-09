@@ -27,10 +27,10 @@ Image::Image(Args const& args) noexcept
 auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
   auto const t_start = std::chrono::high_resolution_clock::now();
 
-  auto constexpr block_size = 1024U;
+  auto constexpr block_size = 128U;
   auto constexpr uset_1 = IntSet{1U};
   auto constexpr fset_4 = FloatSet{4.0F};
-  auto constexpr uset_maxperiod = IntSet{150U};
+  auto constexpr uset_maxperiod = IntSet{73U};
   auto constexpr simd_width = static_cast<n32>(uset_1.lanes.size());
   auto constexpr px_x_offset = []() {
     auto ret = IntSet{0U};
