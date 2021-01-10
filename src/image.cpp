@@ -18,7 +18,7 @@ Image::Image(Args const& args) noexcept
     : resolution_{args.resolution}, frame_{args.frame}, maxiter_{args.maxiter},
       thread_count_{args.thread_count} {
 
-  auto thread_pool = ThreadPool{};
+  auto thread_pool = std::vector<std::jthread>{};
   auto idx = std::atomic<n32>{};
 
   for (auto i = 0U; i < thread_count_; ++i)

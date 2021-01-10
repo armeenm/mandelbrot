@@ -29,7 +29,6 @@ public:
   using Coord = GenCoord<n32>;
   using PixelSet = GenCoord<IntSet<n32>>;
   using Frame = GenFrame<f32>;
-  using ThreadPool = std::vector<std::jthread>;
 
   struct Args {
     Coord resolution = {.x = 1920U, .y = 1080U};
