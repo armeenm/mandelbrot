@@ -113,8 +113,8 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
         // TODO: This should calculate the location of the y-axis //
         auto const mirror = resolution_.y - 1U - 2 * px.imag.lanes[0];
 
-        iter.store(&data_[pxidx]);
-        iter.store(&data_[pxidx + mirror * resolution_.x]);
+        iter.stream_store(&data_[pxidx]);
+        iter.stream_store(&data_[pxidx + mirror * resolution_.x]);
 
         pxidx += simd_width;
       }
