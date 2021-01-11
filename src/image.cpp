@@ -31,7 +31,7 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
   auto constexpr block_size = 128U;
   auto constexpr uset_1 = IntSet{1U};
   auto constexpr fset_4 = FloatSet{4.0F};
-  auto constexpr uset_maxperiod = IntSet{73U};
+  auto constexpr uset_maxperiod = IntSet{350U};
   auto constexpr simd_width = static_cast<n32>(uset_1.lanes.size());
   auto constexpr px_x_offset = []() {
     auto ret = IntSet{0U};
@@ -49,14 +49,15 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
   auto period = IntSet{0U};
   auto pxidx = n32{};
 
-  while ((pxidx = idx.fetch_add(simd_width * block_size, std::memory_order_relaxed)) < pixel_count_)
+  while ((pxidx = idx.fetch_add(simd_width * block_size, std::memory_order_relaxed)) <
+         (pixel_count_ / 2))
     [[likely]] {
 
       for (auto i = 0U; i < block_size; ++i) {
+        auto const px = Complex<IntSet<n32>>{IntSet{pxidx % resolution_.x} + px_x_offset,
+                                             pxidx / resolution_.x};
 
         auto const [c, inside] = [&] {
-          auto const px = Complex<IntSet<n32>>{IntSet{pxidx % resolution_.x} + px_x_offset,
-                                               pxidx / resolution_.x};
           auto const px_float =
               Complex{static_cast<FloatSet>(px.real), static_cast<FloatSet>(px.imag)};
 
@@ -107,7 +108,10 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
         }
 
         // Update picture //
-        iter.stream_store(&data_[pxidx]);
+        auto const mirror = resolution_.y - 1U - 2 * px.imag.lanes[0];
+
+        iter.store(&data_[pxidx]);
+        iter.store(&data_[pxidx + mirror * resolution_.x]);
 
         pxidx += simd_width;
       }
