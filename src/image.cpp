@@ -77,18 +77,21 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
                                 IntSet<n32>{bit_cast<__m256i>((in_cardioid | in_b2).vec)});
         }();
 
-        auto z = Complex<FloatSet>{};
-        auto zsq = Complex<FloatSet>{};
-        auto zold = Complex<FloatSet>{};
+        auto z = c;
+        auto zsq = Complex{z.real * z.real, z.imag * z.imag};
+        auto zold = z;
 
         auto iter = uset_limiter & inside;
-        auto done = inside;
+        auto done = inside | (zsq.real + zsq.imag > fset_4);
 
         while (done.movemask() != -1) {
           z.imag = (z.real + z.real) * z.imag + c.imag;
           z.real = zsq.real - zsq.imag + c.real;
-          zsq.real = z.real * z.real;
           zsq.imag = z.imag * z.imag;
+          zsq.real = z.real * z.real;
+
+          iter += uset_1 & ~done;
+          ++period;
 
           // Check lane done status //
           auto const over_4 = (zsq.real + zsq.imag) > fset_4;
@@ -103,9 +106,6 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
             period = 0;
             zold = z;
           }
-
-          iter += uset_1 & ~done;
-          ++period;
         }
 
         // Update picture //
