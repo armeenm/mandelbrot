@@ -31,7 +31,7 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
   auto constexpr block_size = 128U;
   auto constexpr uset_1 = IntSet{1U};
   auto constexpr fset_4 = FloatSet{4.0F};
-  auto constexpr uset_maxperiod = IntSet{350U};
+  auto constexpr maxperiod = 350U;
   auto constexpr simd_width = static_cast<n32>(uset_1.lanes.size());
   auto constexpr px_x_offset = []() {
     auto ret = IntSet{0U};
@@ -39,14 +39,12 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
     return ret;
   }();
 
-  auto const uset_maxiter = IntSet{maxiter_};
   auto const uset_limiter = IntSet{maxiter_ - 1U};
 
   auto const scaling = Complex<FloatSet>{frame_.width() / static_cast<f32>(resolution_.x),
                                          frame_.height() / static_cast<f32>(resolution_.y)};
 
-  auto zold = Complex<FloatSet>{};
-  auto period = IntSet{0U};
+  auto period = 0U;
   auto pxidx = n32{};
 
   while ((pxidx = idx.fetch_add(simd_width * block_size, std::memory_order_relaxed)) <
@@ -81,8 +79,9 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
 
         auto z = Complex<FloatSet>{};
         auto zsq = Complex<FloatSet>{};
+        auto zold = Complex<FloatSet>{};
 
-        auto iter = uset_maxiter & inside;
+        auto iter = uset_limiter & inside;
         auto done = inside;
 
         while (done.movemask() != -1) {
@@ -91,20 +90,22 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
           zsq.real = z.real * z.real;
           zsq.imag = z.imag * z.imag;
 
-          iter += uset_1 & ~done;
-          period += uset_1 & ~done;
-
           // Check lane done status //
           auto const over_4 = (zsq.real + zsq.imag) > fset_4;
-          auto const reached_iter_limit = iter > uset_limiter;
-          auto const reached_period_limit = period > uset_maxperiod;
+          auto const reached_iter_limit = iter >= uset_limiter;
+          auto const reached_period_limit = period > maxperiod;
           auto const repeat = FloatSet{(z.real == zold.real) & (z.imag == zold.imag)};
 
           done |= reached_iter_limit | over_4 | repeat;
-          iter = (iter & ~repeat) | (uset_maxiter & repeat);
-          period &= ~reached_period_limit;
-          zold.real = (zold.real & ~reached_period_limit) | (z.real & reached_period_limit);
-          zold.imag = (zold.imag & ~reached_period_limit) | (z.imag & reached_period_limit);
+          iter = (iter & ~repeat) | (uset_limiter & repeat);
+
+          if (reached_period_limit) {
+            period = 0;
+            zold = z;
+          }
+
+          iter += uset_1 & ~done;
+          ++period;
         }
 
         // Update picture //
