@@ -1,3 +1,3 @@
 #pragma once
 
-auto constexpr inline profiling = true;
+auto constexpr inline profiling = false;
