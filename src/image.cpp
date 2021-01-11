@@ -1,4 +1,5 @@
 #include "image.h"
+#include "conf.h"
 #include "util.h"
 
 #include <algorithm>
@@ -120,7 +121,9 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
     }
 
   auto const t_end = std::chrono::high_resolution_clock::now();
-  fmt::print("calc_(): {}ms\n", to_ms(t_start, t_end));
+
+  if constexpr (!profiling)
+    fmt::print("calc_(): {}ms\n", to_ms(t_start, t_end));
 }
 
 auto Image::save_pgm(std::string_view const filename) const noexcept -> bool {
