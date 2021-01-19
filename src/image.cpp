@@ -97,17 +97,12 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
           iter += uset_1 & ~done;
           ++period;
 
-          // Check lane done status //
-          auto const over_4 = zabssq > fset_4;
-          auto const reached_period_limit = period > maxperiod;
-          auto const repeat = zabssq == zold;
+          _mm256_maskstore_epi32(reinterpret_cast<i32*>(&iter.vec),
+                                 bit_cast<__m256i>(zabssq == zold), uset_limiter.vec);
 
-          _mm256_maskstore_epi32(reinterpret_cast<i32*>(&iter.vec), bit_cast<__m256i>(repeat.vec),
-                                 uset_limiter.vec);
+          done |= (iter >= uset_limiter) | (zabssq > fset_4);
 
-          done |= (iter >= uset_limiter) | over_4;
-
-          if (reached_period_limit) {
+          if (period > maxperiod) {
             period = 0;
             zold = zabssq;
           }
