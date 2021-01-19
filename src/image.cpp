@@ -81,32 +81,34 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
 
         auto z = c;
         auto zsq = Complex{z.real * z.real, z.imag * z.imag};
-        auto zold = z;
+        auto zabssq = zsq.real + zsq.imag;
+        auto zold = zabssq;
 
         auto iter = uset_limiter & inside;
-        auto done = inside | (zsq.real + zsq.imag > fset_4);
+        auto done = inside | (zabssq > fset_4);
 
         while (done.movemask() != -1) {
           z.imag = (z.real + z.real) * z.imag + c.imag;
           z.real = zsq.real - zsq.imag + c.real;
           zsq.imag = z.imag * z.imag;
           zsq.real = z.real * z.real;
+          zabssq = zsq.real + zsq.imag;
 
           iter += uset_1 & ~done;
           ++period;
 
           // Check lane done status //
-          auto const over_4 = (zsq.real + zsq.imag) > fset_4;
+          auto const over_4 = zabssq > fset_4;
           auto const reached_iter_limit = iter >= uset_limiter;
           auto const reached_period_limit = period > maxperiod;
-          auto const repeat = FloatSet{(z.real == zold.real) & (z.imag == zold.imag)};
+          auto const repeat = zabssq == zold;
 
           done |= reached_iter_limit | over_4 | repeat;
           iter = (iter & ~repeat) | (uset_limiter & repeat);
 
           if (reached_period_limit) {
             period = 0;
-            zold = z;
+            zold = zabssq;
           }
         }
 
