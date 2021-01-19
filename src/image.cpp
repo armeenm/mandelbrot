@@ -104,7 +104,8 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
           auto const repeat = zabssq == zold;
 
           done |= reached_iter_limit | over_4 | repeat;
-          iter = (iter & ~repeat) | (uset_limiter & repeat);
+          _mm256_maskstore_epi32(reinterpret_cast<i32*>(&iter.vec), bit_cast<__m256i>(repeat.vec),
+                                 uset_limiter.vec);
 
           if (reached_period_limit) {
             period = 0;
