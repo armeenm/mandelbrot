@@ -108,7 +108,6 @@ auto Image::calc_(std::atomic<n32>& idx) noexcept -> void {
           }
         }
 
-        // Update picture //
         // TODO: This should calculate the location of the y-axis //
         auto const mirror = resolution_.y - 1U - 2 * px.imag.lanes[0];
 
