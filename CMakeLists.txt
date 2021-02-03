@@ -21,10 +21,16 @@ file(GLOB_RECURSE SRCS
   CONFIGURE_DEPENDS
   "src/*.cpp")
 
+list(PREPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
+list(PREPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
+
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 find_package(Threads REQUIRED)
 find_package(fmt REQUIRED CONFIG)
+find_package(glew REQUIRED CONFIG)
+find_package(glfw3 REQUIRED CONFIG)
+find_package(imgui REQUIRED CONFIG)
 
 add_executable(mandelbrot ${SRCS})
 
@@ -47,7 +53,7 @@ set(COMPILE_OPTS
   -Wconversion
   -Wpedantic
   -pipe)
-set(LINK_OPTS ${LINK_COMPILE_OPTS})
+set(LINK_OPTS ${LINK_COMPILE_OPTS} ${CONAN_SHARED_LINKER_FLAGS})
 
 set(DEBUG_LINK_COMPILE_OPTS -fno-omit-frame-pointer -fsanitize=address,undefined)
 set(DEBUG_COMPILE_OPTS ${DEBUG_LINK_COMPILE_OPTS})
