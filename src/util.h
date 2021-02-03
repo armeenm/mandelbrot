@@ -4,6 +4,7 @@
 #include <concepts>
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <type_traits>
 
 using Size = std::size_t;
@@ -145,3 +146,12 @@ auto inline constexpr toggle_bit [[nodiscard]] (T const val, n32 const idx) -> T
 template <typename T> [[nodiscard]] auto constexpr to_ms(T const& start, T const& end) {
   return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 }
+
+struct SBRMHelper {
+public:
+  SBRMHelper(std::function<void()> func) : dtor_{std::move(func)} {}
+  ~SBRMHelper() { dtor_(); }
+
+private:
+  std::function<void()> dtor_;
+};

@@ -3,9 +3,12 @@
 #include <string>
 #include <string_view>
 
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
 #include <imgui.h>
 
 #include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 
 #include "conf.h"
 #include "image.h"
@@ -13,40 +16,77 @@
 
 auto constexpr inline filename_def = "mandelbrot.pgm";
 
+auto static glfw_error_callback(int const error, char const* const desc) noexcept -> void {
+  fmt::print(stderr, "GLFW Error: {}: {}\n", error, desc);
+}
+
 auto main(i32 const argc, char const* const* const argv) -> int {
-  if constexpr (profiling)
-    Image{{}};
-  else {
-    if (argc == 3 || argc > 4) {
-      fmt::print("Usage: {} FILENAME [XRES YRES]", argv[0]);
-      return -1;
-    }
-
-    auto const filename = (argc > 1) ? argv[1] : filename_def;
-
-    auto constexpr stoi = [](std::string_view str) {
-      return static_cast<n32>(std::stoul(str.data()));
-    };
-
-    auto const args = [=] {
-      if (argc > 2)
-        return Image::Args{.resolution = Image::Coord{.x = stoi(argv[2]), .y = stoi(argv[3])}};
-      else
-        return Image::Args{};
-    }();
-
-    auto const start_comp = std::chrono::high_resolution_clock::now();
-
-    auto img = Image{args};
-
-    auto const end_comp = std::chrono::high_resolution_clock::now();
-
-    img.save_pgm(filename);
-
-    auto const end_save = std::chrono::high_resolution_clock::now();
-
-    fmt::print("Total time: {}ms\n", to_ms(start_comp, end_save));
-    fmt::print("  Computation time: {}ms\n", to_ms(start_comp, end_comp));
-    fmt::print("  Saving time: {}ms\n", to_ms(end_comp, end_save));
+  glfwSetErrorCallback(glfw_error_callback);
+  if (!glfwInit()) {
+    fmt::print("Failed to initialize GLFW\n");
+    return -1;
   }
+
+  auto const glsl_version = "#version 150";
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+
+  auto window = glfwCreateWindow(1280, 720, "Example", nullptr, nullptr);
+  if (!window) {
+    fmt::print("Failed to create GLFW window\n");
+    return -1;
+  }
+
+  glfwMakeContextCurrent(window);
+  glfwSwapInterval(1); // vsync
+
+  if (glewInit() != GLEW_OK) {
+    fmt::print("Failed to initialize GLEW\n");
+    return -1;
+  }
+
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  auto io = ImGui::GetIO();
+
+  ImGui::StyleColorsDark();
+  ImGui_ImplGlfw_InitForOpenGL(window, true);
+  ImGui_ImplOpenGL3_Init(glsl_version);
+
+  auto show_demo_window = true;
+  auto const clear_color = ImVec4{0.45f, 0.55f, 0.60f, 1.00f};
+
+  while (!glfwWindowShouldClose(window)) {
+    glfwPollEvents();
+
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+
+    ImGui::NewFrame();
+
+    if (show_demo_window)
+      ImGui::ShowDemoWindow(&show_demo_window);
+
+    ImGui::Render();
+
+    int disp_w, disp_h;
+    glfwGetFramebufferSize(window, &disp_w, &disp_h);
+    glViewport(0, 0, disp_w, disp_h);
+    glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+    glClear(GL_COLOR_BUFFER_BIT);
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    glfwSwapBuffers(window);
+  }
+
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplGlfw_Shutdown();
+  ImGui::DestroyContext();
+
+  glfwDestroyWindow(window);
+  glfwTerminate();
+
+  // auto img = Image{{}};
 }

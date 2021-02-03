@@ -102,7 +102,7 @@ target_compile_options(mandelbrot PRIVATE
   $<$<CONFIG:DEBUG>:${DEBUG_COMPILE_OPTS}>
   $<$<CONFIG:RELEASE>:${RELEASE_COMPILE_OPTS}>)
 
-target_link_libraries(mandelbrot PRIVATE fmt::fmt imgui::imgui Threads::Threads)
+target_link_libraries(mandelbrot PRIVATE fmt::fmt imgui::imgui glfw::glfw GLEW::glew_s Threads::Threads)
 target_link_options(mandelbrot PRIVATE
   ${LINK_OPTS}
   $<$<CONFIG:DEBUG>:${DEBUG_LINK_OPTS}>

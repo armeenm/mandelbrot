@@ -10,9 +10,9 @@ class Mandelbrot(ConanFile):
 
     def imports(self):
         self.copy('imgui_impl_glfw.cpp', src='res/bindings', dst='bindings')
-        self.copy('imgui_impl_opengl2.cpp', src='res/bindings', dst='bindings')
+        self.copy('imgui_impl_opengl3.cpp', src='res/bindings', dst='bindings')
         self.copy('imgui_impl_glfw.h', src='res/bindings', dst='bindings')
-        self.copy('imgui_impl_opengl2.h', src='res/bindings', dst='bindings')
+        self.copy('imgui_impl_opengl3.h', src='res/bindings', dst='bindings')
 
     def build(self):
         cmake = CMake(self)
