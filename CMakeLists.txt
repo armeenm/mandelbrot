@@ -21,6 +21,11 @@ file(GLOB_RECURSE SRCS
   CONFIGURE_DEPENDS
   "src/*.cpp")
 
+file(GLOB IMGUI_BINDINGS
+  LIST_DIRECTORIES false
+  CONFIGURE_DEPENDS
+  "${CMAKE_BINARY_DIR}/bindings/*.cpp")
+
 list(PREPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
 list(PREPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
 
@@ -32,9 +37,13 @@ find_package(glew REQUIRED CONFIG)
 find_package(glfw3 REQUIRED CONFIG)
 find_package(imgui REQUIRED CONFIG)
 
-add_executable(mandelbrot ${SRCS})
+add_executable(mandelbrot ${SRCS} ${IMGUI_BINDINGS})
 
-target_include_directories(mandelbrot PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(mandelbrot SYSTEM PRIVATE
+  ${CMAKE_BINARY_DIR}/bindings)
+
+target_include_directories(mandelbrot PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 set(LINK_COMPILE_OPTS)
 set(COMPILE_OPTS
@@ -93,7 +102,7 @@ target_compile_options(mandelbrot PRIVATE
   $<$<CONFIG:DEBUG>:${DEBUG_COMPILE_OPTS}>
   $<$<CONFIG:RELEASE>:${RELEASE_COMPILE_OPTS}>)
 
-target_link_libraries(mandelbrot PRIVATE fmt::fmt Threads::Threads)
+target_link_libraries(mandelbrot PRIVATE fmt::fmt imgui::imgui Threads::Threads)
 target_link_options(mandelbrot PRIVATE
   ${LINK_OPTS}
   $<$<CONFIG:DEBUG>:${DEBUG_LINK_OPTS}>

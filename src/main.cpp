@@ -3,6 +3,10 @@
 #include <string>
 #include <string_view>
 
+#include <imgui.h>
+
+#include "imgui_impl_glfw.h"
+
 #include "conf.h"
 #include "image.h"
 #include "util.h"
