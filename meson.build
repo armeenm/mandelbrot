@@ -16,6 +16,7 @@ if get_option('use_conan')
   conan = find_program('conan', required: false)
 
   if conan.found()
+    message('Installing deps with Conan...')
     if get_option('buildtype').startswith('release')
       conan_bt = 'build_type=Release'
     else
@@ -35,6 +36,7 @@ if get_option('use_conan')
 endif
 
 fmt = dependency('fmt', include_type: 'system')
+vulkan_headers = dependency('vulkan-headers', include_type: 'system')
 
 comp = meson.get_compiler('cpp')
 if comp.get_argument_syntax() == 'msvc'
@@ -55,10 +57,8 @@ else
   )
 endif
 
-### Bot ###
-
 mandelbrot_tgt = executable('mandelbrot',
   'src/main.cpp',
-  dependencies: [fmt],
+  dependencies: [fmt, vulkan_headers],
   install: true
 )
