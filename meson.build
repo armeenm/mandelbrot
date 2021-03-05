@@ -13,22 +13,24 @@ project('mandelbrot',
 )
 
 if get_option('use_conan')
-  conan = find_program('conan')
+  conan = find_program('conan', required: false)
 
-  if get_option('buildtype').startswith('release')
-    conan_bt = 'build_type=Release'
-  else
-    conan_bt = 'build_type=Debug'
-  endif
+  if conan.found()
+    if get_option('buildtype').startswith('release')
+      conan_bt = 'build_type=Release'
+    else
+      conan_bt = 'build_type=Debug'
+    endif
 
-  r = run_command(conan,
-    'install', meson.current_source_dir(),
-    '-if', meson.current_build_dir(),
-    '-s', conan_bt,
-    '--build=missing')
+    r = run_command(conan,
+      'install', meson.current_source_dir(),
+      '-if', meson.current_build_dir(),
+      '-s', conan_bt,
+      '--build=missing')
 
-  if r.returncode() != 0
-    error('Failed to install dependencies with Conan')
+    if r.returncode() != 0
+      warning('Failed to install dependencies with Conan')
+    endif
   endif
 endif
 
