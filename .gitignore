@@ -4,3 +4,4 @@ profile*
 .clangd
 compile_commands.json
 *.pgm
+.cache
