@@ -36,7 +36,11 @@ if get_option('use_conan')
 endif
 
 fmt = dependency('fmt', include_type: 'system')
+spdlog = dependency('libspdlog', include_type: 'system')
+vulkan = dependency('vulkan', include_type: 'system')
 vulkan_headers = dependency('vulkan-headers', include_type: 'system')
+vk_bootstrap = dependency('vk-bootstrap', include_type: 'system')
+glfw3 = dependency('glfw3', include_type: 'system')
 
 comp = meson.get_compiler('cpp')
 if comp.get_argument_syntax() == 'msvc'
@@ -59,6 +63,6 @@ endif
 
 mandelbrot_tgt = executable('mandelbrot',
   'src/main.cpp',
-  dependencies: [fmt, vulkan_headers],
+  dependencies: [fmt, spdlog, vulkan, vulkan_headers, vk_bootstrap, glfw3],
   install: true
 )
