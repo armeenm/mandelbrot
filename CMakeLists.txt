@@ -26,6 +26,11 @@ file(GLOB IMGUI_BINDINGS
   CONFIGURE_DEPENDS
   "${CMAKE_BINARY_DIR}/bindings/*.cpp")
 
+file(GENERATE OUTPUT "$<CONFIG>/shader.vert"
+  INPUT src/shader.vert)
+file(GENERATE OUTPUT "$<CONFIG>/shader.frag"
+  INPUT src/shader.frag)
+
 list(PREPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
 list(PREPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
 
@@ -71,29 +76,30 @@ set(DEBUG_LINK_OPTS ${DEBUG_LINK_COMPILE_OPTS})
 set(RELEASE_LINK_COMPILE_OPTS -flto)
 set(RELEASE_COMPILE_OPTS
   ${RELEASE_LINK_COMPILE_OPTS}
-  -fmerge-all-constants
-  -fmodulo-sched-allow-regmoves
-  -fgcse-sm
-  -fgcse-las
-  -faggressive-loop-optimizations
-  -flive-range-shrinkage
-  -fipa-pta
-  -fisolate-erroneous-paths-attribute
-  -ftree-loop-ivcanon
-  -fivopts
-  -funroll-loops
-  -frounding-math
-  -fsplit-loops
-  -funswitch-loops
-  -fpeel-loops
-  -fno-signed-zeros
-  -fno-trapping-math
-  -fgraphite-identity
-  -floop-block
-  -floop-interchange
-  -floop-strip-mine
-  -fdiagnostics-color=always
-  -Ofast)
+  #  -fmerge-all-constants
+  #  -fmodulo-sched-allow-regmoves
+  #  -fgcse-sm
+  #  -fgcse-las
+  #  -faggressive-loop-optimizations
+  #  -flive-range-shrinkage
+  #  -fipa-pta
+  #  -fisolate-erroneous-paths-attribute
+  #  -ftree-loop-ivcanon
+  #  -fivopts
+  #  -funroll-loops
+  #  -frounding-math
+  #  -fsplit-loops
+  #  -funswitch-loops
+  #  -fpeel-loops
+  #  -fno-signed-zeros
+  #  -fno-trapping-math
+  #  -fgraphite-identity
+  #  -floop-block
+  #  -floop-interchange
+  #  -floop-strip-mine
+  #  -fdiagnostics-color=always
+  #  -Ofast)
+  )
 set(RELEASE_LINK_OPTS ${RELEASE_LINK_COMPILE_OPTS})
 
 target_compile_features(mandelbrot PRIVATE cxx_std_20)
